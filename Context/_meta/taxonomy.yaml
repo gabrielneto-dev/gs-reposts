@@ -1,0 +1,45 @@
+version: 1
+
+# Canonical tags. Add groups/tags as real domains emerge — do not
+# pre-invent tags for a domain that doesn't exist yet.
+canonical_tags:
+  meta:
+    - bootstrap
+    - project-scope
+  domain:
+    - fastapi
+    - nextrouter
+    - softswitch
+    - telephony
+    - asr
+    - acd
+    - pdd
+    - cdr
+    - clients
+    - api-design
+    - api-quirks
+    - sampling
+    - production-safety
+    - nextqualify
+    - incident
+    - research
+
+statuses:
+  - active
+  - open
+  - answered
+  - planned
+  - in-progress
+  - completed
+  - cancelled
+  - experimental
+  - blocked
+  - superseded
+  - deprecated
+  - archived
+
+confidence:
+  - low
+  - medium
+  - high
+  - verified
