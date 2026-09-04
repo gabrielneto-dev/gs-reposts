@@ -4,10 +4,12 @@ API FastAPI que consulta o softswitch **NextRouter** (NextBilling IP Solutions) 
 de telefonia (ASR, ACD, PDD) e consulta de clientes, prontas pra consumo por outras ferramentas
 (dashboards, relatórios, jobs agendados).
 
-Esse serviço é o **`backend/`** do monorepo — um **adapter**: não tem banco de dados próprio e
-não é a fonte de verdade do sistema. Ele só traduz a API (cheia de particularidades) do NextRouter
-em endpoints REST limpos. O `frontend/` (em construção) é quem tem banco de dados e é o sistema
-de registro de fato; ele consome esse backend pra dados do softswitch.
+Esse serviço é o **`backend/`** do monorepo. Além de traduzir a API (cheia de particularidades) do
+NextRouter em endpoints REST limpos (`/api/asr`, `/api/acd`, `/api/pdd`, `/api/clientes/*` —
+sempre uma chamada ao vivo no softswitch), ele também **tem banco de dados próprio** e roda um
+scheduler que coleta ASR/ACD/PDD por cliente periodicamente (ver `/api/metricas/*` — essas rotas
+leem do banco, não chamam o softswitch a cada request). O `frontend/` (em construção) não tem
+banco — é um consumidor puro desta API.
 
 ## Como rodar
 
@@ -19,13 +21,21 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-Configuração em [`.env`](../.env) (nunca commitar — já está no `.gitignore`):
+Configuração em [`.env`](../.env) (nunca commitar — já está no `.gitignore`, veja `.env.example`):
 
 ```
 SOFTSWITCH_API_URL=sip5.gsvoip.com.br
 SOFTSWITCH_API_TOKEN=...
 SOFTSWITCH_API_KEY=...
+
+DATABASE_URL=postgresql+asyncpg://user:senha@localhost:5432/gs_reposts_metrics
+SCHEDULER_ENABLED=true
+SCHEDULER_SCAN_LIMIT=10000
+SCHEDULER_CLIENT_CONCURRENCY=5
+SCHEDULER_TIMEZONE=America/Sao_Paulo
 ```
+
+Rode as migrações antes de subir a API pela primeira vez: `alembic upgrade head`.
 
 Docs interativos (Swagger) em `http://127.0.0.1:8000/docs`.
 
@@ -60,6 +70,8 @@ Limites descobertos na prática (não documentados oficialmente):
 | [`/api/clientes/busca`](#get-apiclientesbusca) | GET | Busca fuzzy por nome |
 | [`/api/clientes/atividade`](#get-apiclientesatividade) | GET | Clientes ativos numa janela única |
 | [`/api/clientes/recorrencia`](#get-apiclientesrecorrencia) | GET | Clientes ativos em N de M dias |
+| [`/api/metricas/clientes/{cliente_id}`](#get-apimetricasclientescliente_id) | GET | Histórico de ASR/ACD/PDD já coletado (lê do banco) |
+| [`/api/metricas/janelas`](#get-apimetricasjanelas) | GET | Execuções do scheduler (status, erros) |
 | [`/health`](#get-health) | GET | Healthcheck da própria API |
 
 ---
@@ -344,6 +356,93 @@ Se o cliente não bater `dias_minimos`, a resposta vem com `registros: 0` e `cli
 erro).
 
 **Limite de segurança**: até 31 dias por consulta.
+
+---
+
+## `GET /api/metricas/clientes/{cliente_id}`
+
+Histórico de ASR/ACD/PDD **exatos** de um cliente, já coletados pelo scheduler (ver
+`Context/branches/metrics-pipeline/`) — **lê do banco próprio do backend, não chama o
+softswitch**. Diferente de `/api/asr`/`/api/acd`/`/api/pdd`, que consultam o NextRouter ao vivo a
+cada request, essa rota só existe se o scheduler já rodou pra aquele período. Ordenado do mais
+antigo pro mais recente (pronto pra plotar como série temporal).
+
+### Parâmetros
+
+| Nome | Tipo | Obrigatório | Padrão | Descrição |
+|---|---|---|---|---|
+| `cliente_id` | int | **Sim** (path) | — | ID do cliente |
+| `data_inicio` | date | Não | — | Só janelas com início >= essa data |
+| `data_fim` | date | Não | — | Só janelas com início <= essa data (dia inteiro) |
+| `limit` | int | Não | 500 | Máximo de janelas retornadas (até 2000) |
+
+### Exemplo
+
+```bash
+curl "http://127.0.0.1:8000/api/metricas/clientes/256?data_inicio=2026-09-01&data_fim=2026-09-04"
+```
+
+```json
+{
+  "cliente_id": 256,
+  "nome": "SETRA SOLUCOES EM ATENDIMENTO LTDA",
+  "registros": 1,
+  "metricas": [
+    {
+      "window_start": "2026-09-04T19:00:00Z", "window_end": "2026-09-04T20:00:00Z",
+      "total_atendidas": 9716, "total_falhas": 114090, "asr_percentual": 7.85,
+      "acd_segundos": 30.86, "pdd_medio_segundos": 0.626,
+      "occurrences_discovery": 3041, "truncado": false
+    }
+  ],
+  "aviso": null
+}
+```
+
+`window_start`/`window_end` vêm em UTC (Postgres `timestamptz`) — converta pro fuso local
+(`America/Sao_Paulo`, o mesmo do scheduler) na exibição. `404` se o cliente nunca apareceu em
+nenhuma coleta. `occurrences_discovery` é só a contagem na amostra de descoberta daquela janela —
+não é o volume real do cliente (esse já vem em `total_atendidas`/`total_falhas`, que são exatos).
+
+---
+
+## `GET /api/metricas/janelas`
+
+Histórico de **execuções do scheduler** (não dados de cliente) — pra acompanhar se as coletas
+estão rodando OK e se alguma ficou `partial`/`failed`. Ordenado do mais recente pro mais antigo.
+
+### Parâmetros
+
+| Nome | Tipo | Obrigatório | Padrão | Descrição |
+|---|---|---|---|---|
+| `status` | string | Não | — | Filtra por `running`/`completed`/`failed`/`partial` |
+| `data_inicio` / `data_fim` | date | Não | — | Filtra por início da janela |
+| `limit` | int | Não | 100 | Máximo de janelas retornadas (até 2000) |
+
+### Exemplo
+
+```bash
+curl "http://127.0.0.1:8000/api/metricas/janelas?status=partial"
+```
+
+```json
+{
+  "registros": 1,
+  "janelas": [
+    {
+      "id": 1, "window_start": "2026-09-04T19:00:00Z", "window_end": "2026-09-04T20:00:00Z",
+      "status": "partial", "discovery_sample_limit": 10000,
+      "clients_discovered": 72, "clients_processed": 70,
+      "error_message": null,
+      "started_at": "2026-09-04T20:30:46Z", "finished_at": "2026-09-04T20:32:06Z"
+    }
+  ]
+}
+```
+
+`clients_processed < clients_discovered` (status `partial`) significa que 1+ clientes falharam
+nessa janela (geralmente rede transitória, ver o risco documentado em `Context/`) — os que deram
+certo já estão salvos normalmente, só os que falharam ficaram de fora.
 
 ---
 

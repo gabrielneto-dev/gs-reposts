@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.routers import acd, asr, clientes, pdd
+from app.routers import acd, asr, clientes, metricas, pdd
 from app.scheduler.scheduler import start_scheduler, stop_scheduler
 
 
@@ -24,6 +24,7 @@ app.include_router(asr.router)
 app.include_router(acd.router)
 app.include_router(pdd.router)
 app.include_router(clientes.router)
+app.include_router(metricas.router)
 
 
 @app.get("/health", tags=["Health"])
