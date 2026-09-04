@@ -35,3 +35,21 @@ Structural changes to the memory system itself (schema, taxonomy, branch creatio
   `branches/nextrouter-api/_index.md` left over from the pre-monorepo layout.
 - Added a `domain` tags: monorepo, nextjs, prisma, postgres, git.
 - Second checkpoint: `CTX-CP-20260904-1700-monorepo-and-frontend-scaffold`.
+
+## 2026-09-04 — Third branch metrics-pipeline; frontend-nextjs-prisma loses its ORM
+
+- `backend/` was decided to own storage + scheduling (not `frontend/`), recorded as
+  `CTX-DEC-20260904-backend-owns-storage-and-scheduler` (global, amends
+  `CTX-DEC-20260904-monorepo-restructure`'s "backend has no database" framing).
+- Created `Context/branches/metrics-pipeline/` for the new Postgres metrics store + APScheduler
+  living inside `backend/` — `_index.md`, `decisions/`, `facts/`, `risks/`.
+- As a direct consequence, `frontend/`'s Prisma setup was removed entirely. Marked
+  `superseded` (not deleted): `FCT-20260904-prisma8-cli-behavior`, `FCT-20260904-local-postgres`,
+  `DEC-20260904-orm-not-composer`, `DEC-20260904-dedicated-db-role` (all in
+  `frontend-nextjs-prisma`). Updated `FCT-20260904-scaffold` in place (still mostly accurate) and
+  rewrote the branch's `_index.md` to reflect it has no database anymore.
+- Added `domain` tags: scheduler, sqlalchemy, windows.
+- Updated `Context/core/overview.md` (backend is now the system of record) and
+  `Context/core/constraints.md` (scheduler inherits the production-caution rules; new note on
+  observed Windows async I/O flakiness).
+- Third checkpoint: `CTX-CP-20260904-1800-metrics-storage-and-scheduler`.

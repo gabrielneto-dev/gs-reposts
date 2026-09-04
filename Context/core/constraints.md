@@ -27,7 +27,22 @@ naive queries expensive at scale — see
 `Context/branches/nextrouter-api/facts/FCT-20260904-cdr-api-behavior.md`. This project's own code
 enforces safety caps (page size <=10,000, max pages, max days per request, bounded concurrency via
 semaphores) to avoid hammering production — preserve these when modifying the sampling/exact-mode
-logic.
+logic. Since 2026-09-04 this also applies to the `backend/` scheduler
+(`Context/branches/metrics-pipeline/`), which calls this same production API unattended, on a
+fixed schedule, 14 times/day — same GET-only, same caps, `SCHEDULER_ENABLED=false` to disable it
+entirely when testing something unrelated.
+
+## Windows async I/O flakiness (observed, not fully root-caused)
+
+Twice so far (2026-09-04), concurrent async network I/O on the Windows dev machine — both a
+Postgres `asyncpg` connection and concurrent `httpx` calls to the softswitch — failed with a
+connection-reset-shaped error (`WinError 64`, `ConnectionDoesNotExistError`, "All connection
+attempts failed") that did not reproduce on an immediate sequential retry of the exact same
+operation. One instance turned out to be a real problem (wrong DB password) that merely *looked*
+like this; the other was genuinely transient. See
+`Context/branches/metrics-pipeline/risks/RSK-20260904-transient-network-failures-during-collection.md`.
+Don't assume this error shape means "the credentials/config are wrong" — rule that out with one
+clean sequential retry first.
 
 ## Git repository
 

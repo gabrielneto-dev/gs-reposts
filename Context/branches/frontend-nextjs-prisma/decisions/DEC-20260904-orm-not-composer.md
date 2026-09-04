@@ -4,7 +4,7 @@ type: decision
 title: Use `prisma orm init` (classic ORM) instead of the default `prisma init` (Prisma Composer)
 branch: frontend-nextjs-prisma
 tags: [prisma, api-design]
-status: active
+status: superseded
 confidence: high
 created_at: 2026-09-04
 updated_at: 2026-09-04
@@ -12,8 +12,11 @@ source_ids: []
 related: [CTX-FCT-20260904-prisma8-cli-behavior]
 depends_on: []
 supersedes: null
-superseded_by: null
+superseded_by: CTX-DEC-20260904-backend-owns-storage-and-scheduler
 ---
+
+> **Superseded 2026-09-04**: moot — Prisma was removed from `frontend/` entirely, see
+> `CTX-DEC-20260904-backend-owns-storage-and-scheduler`. Kept for history.
 
 # Decision
 

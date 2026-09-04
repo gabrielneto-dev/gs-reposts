@@ -65,3 +65,6 @@ None currently open in this branch.
 
 - `frontend-nextjs-prisma` — the other half of the monorepo. Will eventually call this backend's
   HTTP endpoints for softswitch data; no integration code exists yet.
+- `metrics-pipeline` — the scheduler/storage subsystem added 2026-09-04 lives in `backend/` too and
+  is built entirely out of this branch's client functions (`clients/nextrouter.py`), plus one new
+  function added there (`get_exact_metrics_for_client`). No routes changed; still 8 GET routes.

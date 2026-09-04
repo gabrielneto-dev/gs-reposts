@@ -4,7 +4,7 @@ type: decision
 title: Use a dedicated Postgres role/database for the app, not the postgres superuser
 branch: frontend-nextjs-prisma
 tags: [postgres, production-safety]
-status: active
+status: superseded
 confidence: high
 created_at: 2026-09-04
 updated_at: 2026-09-04
@@ -12,8 +12,14 @@ source_ids: []
 related: [CTX-FCT-20260904-local-postgres]
 depends_on: []
 supersedes: null
-superseded_by: null
+superseded_by: CTX-DEC-20260904-backend-owns-storage-and-scheduler
 ---
+
+> **Superseded 2026-09-04**: `frontend/` no longer owns a database at all (see
+> `CTX-DEC-20260904-backend-owns-storage-and-scheduler`), so this specific role/database is moot.
+> The underlying principle (dedicated least-privilege role, not the superuser) was reapplied for
+> the backend's new `gs_reposts_backend` role — see
+> `branches/metrics-pipeline/facts/FCT-20260904-schema-and-reused-functions.md`.
 
 # Decision
 

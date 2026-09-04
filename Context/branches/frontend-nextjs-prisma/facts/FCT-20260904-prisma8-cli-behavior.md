@@ -4,7 +4,7 @@ type: fact
 title: How the Prisma 8 CLI actually works (differs a lot from prior Prisma versions)
 branch: frontend-nextjs-prisma
 tags: [prisma, api-quirks]
-status: active
+status: superseded
 confidence: verified
 created_at: 2026-09-04
 updated_at: 2026-09-04
@@ -12,11 +12,15 @@ source_ids: []
 related: [CTX-DEC-20260904-orm-not-composer]
 depends_on: []
 supersedes: null
-superseded_by: null
+superseded_by: CTX-DEC-20260904-backend-owns-storage-and-scheduler
 valid_from: 2026-09-04
-valid_until: null
+valid_until: 2026-09-04
 revisit_at: null
 ---
+
+> **Superseded 2026-09-04**: Prisma was removed from `frontend/` entirely (see
+> `CTX-DEC-20260904-backend-owns-storage-and-scheduler` — the backend now owns all storage). Kept
+> for history in case Prisma is reconsidered later, but none of this reflects the current codebase.
 
 ## Fact
 

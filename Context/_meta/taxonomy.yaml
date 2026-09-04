@@ -28,6 +28,9 @@ canonical_tags:
     - prisma
     - postgres
     - git
+    - scheduler
+    - sqlalchemy
+    - windows
 
 statuses:
   - active

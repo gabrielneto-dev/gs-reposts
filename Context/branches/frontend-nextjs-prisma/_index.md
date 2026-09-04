@@ -3,68 +3,61 @@
 ## Purpose
 
 The user-facing application — `frontend/` in the monorepo (see
-`Context/global/decisions/DEC-20260904-monorepo-restructure.md`). Owns its own database; is the
-system of record for the project, unlike `backend/` (a stateless adapter — see
-`Context/branches/nextrouter-api/`).
+`Context/global/decisions/DEC-20260904-monorepo-restructure.md`). Despite the branch name (kept
+for stable IDs/history), **it no longer owns a database or uses Prisma** — see
+`Context/global/decisions/DEC-20260904-backend-owns-storage-and-scheduler.md` (2026-09-04): the
+`backend/` now owns all storage (`Context/branches/metrics-pipeline/`), and `frontend/` is a pure
+HTTP consumer of `backend/`'s API.
 
 ## Scope
 
 - The Next.js app under `frontend/`
-- Prisma 8 ("Prisma Next", still a release candidate) as the ORM, targeting PostgreSQL
-- How Prisma 8's CLI actually behaves (it changed a lot from prior Prisma versions)
-- The local PostgreSQL setup used for development
+- (Historical, superseded) Prisma 8 as the ORM — see the superseded records below, kept for
+  history in case an ORM is reconsidered later
+- No integration code calling `backend/` exists yet — that's the next real piece of work here
 
 ## Current state
 
-Freshly scaffolded and verified end-to-end against a real local database (create/read/delete
-round trip through `db.orm.public.User`). No real data model yet — the schema at
-`frontend/src/prisma/contract.prisma` still has only the Next.js/Prisma starter's example
-`User`/`Post` models. No pages/components beyond the Next.js default starter page exist yet.
+Next.js 16 scaffold only (App Router, TypeScript, Tailwind v4) — no database, no Prisma, no real
+pages/components beyond the default starter page. `npm run build` verified clean after the Prisma
+removal on 2026-09-04 (had to also delete a leftover `prisma.config.ts` that `npm run build`'s
+typecheck caught referencing removed packages).
 
 ## Core concepts
 
-- **"Prisma Next"** is this project's name for classic-style Prisma ORM usage in v8 (schema file +
-  typed client), reached via `prisma orm init` — see
-  `decisions/DEC-20260904-orm-not-composer.md`. Don't confuse it with **Prisma Composer**
-  (`@prisma/composer`), a different, much heavier product for building "Prisma Apps" (RPC
-  services, Modules, deploy to Prisma Cloud) that this project does NOT use.
-- The schema file is called the **data contract** (`contract.prisma`, not `schema.prisma`), and
-  `prisma contract emit` regenerates its companion `contract.json`/`contract.d.ts` — all three are
-  committed.
-- Query API is `db.orm.<namespace>.<Model>` (e.g. `db.orm.public.User`), fluent
-  `.where(...).select(...).first()/.all()`, not Prisma Client's classic `.findUnique()`-style API.
-  Full reference lives in `frontend/.claude/skills/prisma-8/` (synced from the installed package —
-  read it before writing non-trivial queries; the API is genuinely different from Prisma 5/6/7).
+None currently — the Prisma-specific concepts that used to live here (Prisma Next vs. Composer,
+the "data contract" file, the `db.orm.<namespace>.<Model>` query API) are historical only, see the
+superseded records below.
 
 ## Key records
 
-- `facts/FCT-20260904-scaffold.md`
-- `facts/FCT-20260904-prisma8-cli-behavior.md`
-- `facts/FCT-20260904-local-postgres.md`
-- `decisions/DEC-20260904-orm-not-composer.md`
-- `decisions/DEC-20260904-dedicated-db-role.md`
+- `facts/FCT-20260904-scaffold.md` (still mostly accurate — Prisma-specific parts flagged inline)
+- `facts/FCT-20260904-prisma8-cli-behavior.md` — **superseded**
+- `facts/FCT-20260904-local-postgres.md` — **superseded** (the Postgres-17-as-a-service part is
+  still true and reused by `metrics-pipeline`; the role/database part is not)
+- `decisions/DEC-20260904-orm-not-composer.md` — **superseded**
+- `decisions/DEC-20260904-dedicated-db-role.md` — **superseded** (principle reapplied in
+  `metrics-pipeline`)
 
 ## Active decisions
 
-See `decisions/` above — both active as of 2026-09-04.
+None active in this branch as of 2026-09-04 — see
+`Context/global/decisions/DEC-20260904-backend-owns-storage-and-scheduler.md` instead.
 
 ## Open questions
 
-- No real data model defined yet — what entities/tables the frontend actually needs is still
-  undecided (only the Next.js/Prisma starter `User`/`Post` example exists).
+- No real data model defined yet for whatever UI/pages the frontend will eventually need.
 - Auth strategy for the frontend not yet decided.
+- How the frontend will fetch/display `backend/`'s reporting data (`metrics-pipeline`) — not yet
+  designed; no fetch layer exists.
 
 ## Risks
 
-- Prisma 8 is a **release candidate** (`8.0.0-rc.x`), not a final stable release — expect breaking
-  changes between RC bumps. `npm view prisma dist-tags` showed `prev: 7.10.0` (last stable) vs.
-  `latest: 8.0.0-rc.12` at the time of setup. `.claude/skills/prisma-8/upgrading/` has per-RC
-  upgrade instructions if `npm outdated` shows a newer RC.
-- No staging database exists — same production-caution posture as `backend/`, just for a local dev
-  Postgres instead of the company's real softswitch (lower stakes, but still worth remembering that
-  `frontend/.env`'s `DATABASE_URL` points at a real local database, not a mock).
+None specific to this branch right now (the Prisma-RC risk is moot since Prisma was removed).
 
 ## Relations to other branches
 
 - `nextrouter-api` — `frontend/` will eventually consume `backend/`'s HTTP endpoints for
   softswitch data; no actual integration code exists yet.
+- `metrics-pipeline` — the reason this branch lost its database; the reporting data `frontend/`
+  will eventually display lives there.

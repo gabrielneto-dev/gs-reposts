@@ -20,6 +20,12 @@ revisit_at: null
 
 ## Fact
 
+> **Update 2026-09-04**: Prisma was removed entirely (see
+> `CTX-DEC-20260904-backend-owns-storage-and-scheduler`) — `src/prisma/`, `prisma.config.ts`,
+> `migrations/`, and `DATABASE_URL` no longer exist. Everything below about the Next.js
+> App Router/Tailwind/TypeScript scaffold itself is still accurate; only the Prisma-related
+> paths are gone.
+
 `frontend/` is a Next.js 16 app (App Router, TypeScript, Tailwind CSS v4, Turbopack, npm, `src/`
 directory, `@/*` import alias) scaffolded with `create-next-app@latest`, plus Prisma 8
 ("Prisma Next", see `FCT-20260904-prisma8-cli-behavior`) as the ORM.

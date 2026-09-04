@@ -4,7 +4,7 @@ type: fact
 title: Local development database setup
 branch: frontend-nextjs-prisma
 tags: [postgres, production-safety]
-status: active
+status: superseded
 confidence: verified
 created_at: 2026-09-04
 updated_at: 2026-09-04
@@ -12,11 +12,19 @@ source_ids: []
 related: [CTX-DEC-20260904-dedicated-db-role]
 depends_on: []
 supersedes: null
-superseded_by: null
+superseded_by: CTX-DEC-20260904-backend-owns-storage-and-scheduler
 valid_from: 2026-09-04
-valid_until: null
+valid_until: 2026-09-04
 revisit_at: null
 ---
+
+> **Superseded 2026-09-04**: `frontend/` no longer has a database — Prisma was removed, see
+> `CTX-DEC-20260904-backend-owns-storage-and-scheduler`. The `gs_reposts_app`/`gs_reposts`
+> role/database described below were NOT dropped and may still exist on the local Postgres
+> instance, just unused. The Postgres-17-as-a-Windows-service fact below is still true and
+> reusable — the new `gs_reposts_backend`/`gs_reposts_metrics` role/database (see
+> `branches/metrics-pipeline/facts/FCT-20260904-schema-and-reused-functions.md`) lives on the same
+> instance.
 
 ## Fact
 
