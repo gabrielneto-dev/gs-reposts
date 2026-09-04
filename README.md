@@ -21,6 +21,7 @@ softswitch **NextRouter C4 SoftSwitch** (NextBilling IP Solutions).
   ver `Context/branches/nextrouter-api/facts/FCT-20260904-cdr-api-behavior.md`) em endpoints REST
   limpos (ASR, ACD, PDD, clientes). Stateless, sem persistência própria.
 - **`frontend/`**: interface do usuário + banco de dados próprio (autenticação, preferências,
-  dados agregados, o que mais for necessário). Consome o backend via HTTP.
+  dados agregados, o que mais for necessário). Consome o backend via HTTP. Stack: Next.js 16 +
+  Prisma 8 (ORM) + PostgreSQL — ver `frontend/README.md`.
 
 Ver `backend/docs/API.md` para a documentação completa das rotas do backend.
