@@ -4,9 +4,15 @@ API FastAPI que consulta o softswitch **NextRouter** (NextBilling IP Solutions) 
 de telefonia (ASR, ACD, PDD) e consulta de clientes, prontas pra consumo por outras ferramentas
 (dashboards, relatórios, jobs agendados).
 
+Esse serviço é o **`backend/`** do monorepo — um **adapter**: não tem banco de dados próprio e
+não é a fonte de verdade do sistema. Ele só traduz a API (cheia de particularidades) do NextRouter
+em endpoints REST limpos. O `frontend/` (em construção) é quem tem banco de dados e é o sistema
+de registro de fato; ele consome esse backend pra dados do softswitch.
+
 ## Como rodar
 
 ```bash
+cd backend
 python -m venv .venv
 source .venv/Scripts/activate   # Windows (Git Bash)
 pip install -r requirements.txt

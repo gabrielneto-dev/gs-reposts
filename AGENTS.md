@@ -58,6 +58,16 @@ If a durable, project-wide operating rule is discovered, evaluate whether it bel
 
 ## Project status
 
-This project was bootstrapped while the working directory was empty. There is no code, README, or prior documentation yet. See `Context/global/questions/QUE-20260903-project-purpose.md` for the open question about what this project actually is, and `Context/STATE.md` for current status.
+`relatorios` is a monorepo for a VoIP telephony company's internal reporting system:
+
+- `backend/` — a FastAPI service that adapts the company's NextRouter C4 SoftSwitch API into
+  clean REST endpoints (ASR/ACD/PDD metrics, client lookups). It is an **adapter/integration
+  layer only** — it does not own a database and is not the system of record.
+- `frontend/` — the user-facing application (in progress). It owns its own database and is the
+  actual system of record; it consumes `backend/`'s adapter endpoints for softswitch data.
+- `Context/` and this file apply to the whole monorepo, not just one side.
+
+See `Context/STATE.md` for current status and `Context/branches/nextrouter-api/_index.md` for the
+backend's technical detail.
 
 <!-- CONTEXT-ENGINEERING:END -->
