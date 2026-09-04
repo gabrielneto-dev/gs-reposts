@@ -23,6 +23,11 @@ canonical_tags:
     - nextqualify
     - incident
     - research
+    - monorepo
+    - nextjs
+    - prisma
+    - postgres
+    - git
 
 statuses:
   - active

@@ -8,7 +8,8 @@ Everything related to the FastAPI reporting service that queries the NextRouter 
 
 ## Scope
 
-- The FastAPI app under `app/` (config, clients, routers, schemas, utils)
+- The FastAPI app under `backend/app/` (config, clients, routers, schemas, utils) — moved here
+  from the repo root on 2026-09-04, see `Context/global/decisions/DEC-20260904-monorepo-restructure.md`
 - How the NextRouter API actually behaves (vs. what its Confluence docs claim)
 - Design decisions about sampling, exact modes, and production-load safety
 - The final route inventory and what each returns
@@ -17,7 +18,8 @@ Everything related to the FastAPI reporting service that queries the NextRouter 
 
 Working MVP: 8 GET routes, tested against production with real client data. See
 `facts/FCT-20260904-route-inventory.md` for the exact list. Documented for external consumers in
-`docs/API.md` (project root, not in Context — it's a deliverable, not project memory).
+`backend/docs/API.md` (not in Context — it's a deliverable, not project memory). Lives in the
+`backend/` half of the monorepo — see `Context/branches/frontend-nextjs-prisma/` for the other half.
 
 ## Core concepts
 
@@ -29,7 +31,7 @@ Working MVP: 8 GET routes, tested against production with real client data. See
 - A fuzzy client-name-search bug (false positives from arbitrary substring matching) was found and
   fixed during this work — see the "Problems solved" section of
   `Context/checkpoints/CP-20260904-1500-fastapi-nextrouter-mvp.md`; the fix lives in
-  `app/utils/fuzzy.py`.
+  `backend/app/utils/fuzzy.py`.
 
 ## Key records
 
@@ -61,4 +63,5 @@ None currently open in this branch.
 
 ## Relations to other branches
 
-None yet — this is currently the only branch.
+- `frontend-nextjs-prisma` — the other half of the monorepo. Will eventually call this backend's
+  HTTP endpoints for softswitch data; no integration code exists yet.

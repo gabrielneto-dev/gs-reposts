@@ -22,3 +22,16 @@ Structural changes to the memory system itself (schema, taxonomy, branch creatio
 - Rewrote `core/overview.md`, `core/goals.md`, `core/constraints.md`, `core/glossary.md` from
   bootstrap placeholders to real content.
 - First non-bootstrap checkpoint: `CTX-CP-20260904-1500-fastapi-nextrouter-mvp`.
+
+## 2026-09-04 — Monorepo split: second branch frontend-nextjs-prisma
+
+- Project pushed to GitHub (`https://github.com/gabrielneto-dev/gs-reposts.git`) and restructured
+  into a monorepo: `backend/` (the existing FastAPI service, moved) + `frontend/` (new). Recorded
+  as `CTX-DEC-20260904-monorepo-restructure` (global, since it affects both branches).
+- Created `Context/branches/frontend-nextjs-prisma/` for the new Next.js + Prisma 8 + PostgreSQL
+  frontend — `facts/`, `decisions/` covering the scaffold, Prisma 8's CLI behavior (notably the
+  Composer-vs-ORM trap), and the local Postgres setup.
+- Fixed stale `backend/`-prefix-missing paths in `CTX-FCT-20260904-route-inventory` and
+  `branches/nextrouter-api/_index.md` left over from the pre-monorepo layout.
+- Added a `domain` tags: monorepo, nextjs, prisma, postgres, git.
+- Second checkpoint: `CTX-CP-20260904-1700-monorepo-and-frontend-scaffold`.

@@ -9,7 +9,7 @@ confidence: verified
 created_at: 2026-09-04
 updated_at: 2026-09-04
 source_ids: []
-related: [CTX-DEC-20260904-route-simplification]
+related: [CTX-DEC-20260904-route-simplification, CTX-DEC-20260904-monorepo-restructure]
 depends_on: []
 supersedes: null
 superseded_by: null
@@ -21,8 +21,12 @@ revisit_at: null
 ## Fact
 
 As of 2026-09-04 the app exposes exactly 8 GET routes (all read-only). Full parameter/response
-docs live in `docs/API.md` at the project root — this record is a pointer + summary, not a
-duplicate of that doc (avoid re-deriving; read `docs/API.md` directly for details).
+docs live in `backend/docs/API.md` — this record is a pointer + summary, not a duplicate of that
+doc (avoid re-deriving; read it directly for details).
+
+**Path note**: the service moved from the repo root into `backend/` on 2026-09-04 (see
+`CTX-DEC-20260904-monorepo-restructure`) — paths below are relative to `backend/`, not the repo
+root.
 
 | Route | File | Purpose |
 |---|---|---|
