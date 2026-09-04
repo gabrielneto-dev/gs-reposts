@@ -139,6 +139,38 @@ async def get_asr_data(
     return {"atendidas": atendidas, "falhas": falhas}
 
 
+async def get_exact_metrics_for_client(*, cliente_id: int, periodo: dict[str, Any]) -> dict[str, Any]:
+    """ASR/ACD/PDD 100% exatos de UM cliente numa janela — mesma lógica que os modos `exato=true`
+    de /api/asr e /api/pdd e o cálculo padrão de /api/acd, só que compostos numa chamada só. Como já
+    filtra por `cliente_id` e a janela é estreita (1h, ou a janela overnight), o custo é muito menor
+    que um scan sem filtro — não há motivo pra amostrar aqui."""
+
+    cdr_agregado, falhas = await asyncio.gather(
+        get_cdr_aggregate(cliente_id=cliente_id, periodo=periodo),
+        get_disconnection_full(cliente_id=cliente_id, periodo=periodo),
+    )
+
+    total_atendidas = cdr_agregado["total_records"]
+    total_falhas = falhas["total_records"]
+    total_chamadas = total_atendidas + total_falhas
+    asr_percentual = (total_atendidas / total_chamadas * 100) if total_chamadas > 0 else 0.0
+
+    total_time = cdr_agregado.get("total_time")
+    acd_segundos = (total_time / total_atendidas) if total_time and total_atendidas > 0 else None
+
+    pdd_valores = [float(r["pdd"]) for r in falhas.get("data", []) if r.get("pdd") is not None]
+    pdd_medio_segundos = (sum(pdd_valores) / len(pdd_valores)) if pdd_valores else None
+
+    return {
+        "total_atendidas": total_atendidas,
+        "total_falhas": total_falhas,
+        "asr_percentual": round(asr_percentual, 2),
+        "acd_segundos": round(acd_segundos, 2) if acd_segundos is not None else None,
+        "pdd_medio_segundos": round(pdd_medio_segundos, 3) if pdd_medio_segundos is not None else None,
+        "truncado": falhas.get("truncado", False),
+    }
+
+
 async def get_contacts(*, start: int = 0, limit: int = 50) -> dict[str, Any]:
     """Consulta /api/contacts: agenda com todos os clientes cadastrados na plataforma."""
 

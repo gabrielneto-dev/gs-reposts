@@ -8,5 +8,12 @@ class Settings(BaseSettings):
     softswitch_api_token: str
     softswitch_api_key: str
 
+    database_url: str
+
+    scheduler_enabled: bool = True
+    scheduler_scan_limit: int = 10000
+    scheduler_client_concurrency: int = 5
+    scheduler_timezone: str = "America/Sao_Paulo"
+
 
 settings = Settings()
