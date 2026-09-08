@@ -71,7 +71,12 @@ export function AlertasTable({ alertas }: { alertas: AlertaDisparado[] }) {
                     {alerta.cliente_nome ?? `Cliente ${alerta.cliente_id}`} · ID {alerta.cliente_id}
                   </p>
                 </div>
-                <span className="text-xs text-zinc-400">{formatadorData.format(new Date(alerta.disparado_em))}</span>
+                <div className="text-right text-xs text-zinc-400">
+                  <p>disparado {formatadorData.format(new Date(alerta.disparado_em))}</p>
+                  {alerta.visto && alerta.visto_em && (
+                    <p className="mt-0.5">visto {formatadorData.format(new Date(alerta.visto_em))}</p>
+                  )}
+                </div>
               </button>
 
               {aberto && (
