@@ -70,6 +70,7 @@ Limites descobertos na prática (não documentados oficialmente):
 | [`/api/clientes/busca`](#get-apiclientesbusca) | GET | Busca fuzzy por nome |
 | [`/api/clientes/atividade`](#get-apiclientesatividade) | GET | Clientes ativos numa janela única |
 | [`/api/clientes/recorrencia`](#get-apiclientesrecorrencia) | GET | Clientes ativos em N de M dias |
+| [`/api/metricas/clientes`](#get-apimetricasclientes) | GET | Um cliente por linha, última coleta (lê do banco) |
 | [`/api/metricas/clientes/{cliente_id}`](#get-apimetricasclientescliente_id) | GET | Histórico de ASR/ACD/PDD já coletado (lê do banco) |
 | [`/api/metricas/janelas`](#get-apimetricasjanelas) | GET | Execuções do scheduler (status, erros) |
 | [`/health`](#get-health) | GET | Healthcheck da própria API |
@@ -359,6 +360,47 @@ erro).
 
 ---
 
+## `GET /api/metricas/clientes`
+
+Um cliente por linha, com ASR/ACD/PDD da coleta **mais recente** já feita pelo scheduler — não
+chama o softswitch. Pensada pra alimentar uma tabela de listagem (dashboard). Só aparecem
+clientes que já tiveram pelo menos uma coleta.
+
+### Parâmetros
+
+| Nome | Tipo | Obrigatório | Padrão | Descrição |
+|---|---|---|---|---|
+| `limit` | int | Não | 200 | Máximo de clientes retornados (até 2000) |
+
+### Exemplo
+
+```bash
+curl "http://127.0.0.1:8000/api/metricas/clientes?limit=50"
+```
+
+```json
+{
+  "registros": 77,
+  "clientes": [
+    {
+      "cliente_id": 256, "nome": "SETRA SOLUCOES EM ATENDIMENTO LTDA",
+      "inicio_janela": "2026-09-08T11:00:00Z", "fim_janela": "2026-09-08T12:00:00Z",
+      "total_atendidas": 7847, "total_falhas": 48054, "asr_percentual": 14.04,
+      "acd_segundos": 31.34, "pdd_medio_segundos": 1.17, "volume_dia": 55901
+    }
+  ]
+}
+```
+
+Ordenado por nome. `asr_percentual`/`acd_segundos`/`pdd_medio_segundos` vêm só da **última janela**
+coletada (`inicio_janela`/`fim_janela` dizem qual) e `asr_percentual` já representa só o "200 OK"
+(`total_atendidas / (total_atendidas + total_falhas) * 100`) — não tem o detalhamento por código
+de falha que `/api/asr` tem. Já `volume_dia` é a soma de `total_atendidas + total_falhas` de
+**todas** as janelas coletadas hoje (não só a última) — por isso pode ser bem maior que
+`total_atendidas + total_falhas` da última janela sozinha.
+
+---
+
 ## `GET /api/metricas/clientes/{cliente_id}`
 
 Histórico de ASR/ACD/PDD **exatos** de um cliente, já coletados pelo scheduler (ver
@@ -389,19 +431,19 @@ curl "http://127.0.0.1:8000/api/metricas/clientes/256?data_inicio=2026-09-01&dat
   "registros": 1,
   "metricas": [
     {
-      "window_start": "2026-09-04T19:00:00Z", "window_end": "2026-09-04T20:00:00Z",
+      "inicio_janela": "2026-09-04T19:00:00Z", "fim_janela": "2026-09-04T20:00:00Z",
       "total_atendidas": 9716, "total_falhas": 114090, "asr_percentual": 7.85,
       "acd_segundos": 30.86, "pdd_medio_segundos": 0.626,
-      "occurrences_discovery": 3041, "truncado": false
+      "ocorrencias_descoberta": 3041, "truncado": false
     }
   ],
   "aviso": null
 }
 ```
 
-`window_start`/`window_end` vêm em UTC (Postgres `timestamptz`) — converta pro fuso local
+`inicio_janela`/`fim_janela` vêm em UTC (Postgres `timestamptz`) — converta pro fuso local
 (`America/Sao_Paulo`, o mesmo do scheduler) na exibição. `404` se o cliente nunca apareceu em
-nenhuma coleta. `occurrences_discovery` é só a contagem na amostra de descoberta daquela janela —
+nenhuma coleta. `ocorrencias_descoberta` é só a contagem na amostra de descoberta daquela janela —
 não é o volume real do cliente (esse já vem em `total_atendidas`/`total_falhas`, que são exatos).
 
 ---
@@ -409,20 +451,20 @@ não é o volume real do cliente (esse já vem em `total_atendidas`/`total_falha
 ## `GET /api/metricas/janelas`
 
 Histórico de **execuções do scheduler** (não dados de cliente) — pra acompanhar se as coletas
-estão rodando OK e se alguma ficou `partial`/`failed`. Ordenado do mais recente pro mais antigo.
+estão rodando OK e se alguma ficou `parcial`/`falhou`. Ordenado do mais recente pro mais antigo.
 
 ### Parâmetros
 
 | Nome | Tipo | Obrigatório | Padrão | Descrição |
 |---|---|---|---|---|
-| `status` | string | Não | — | Filtra por `running`/`completed`/`failed`/`partial` |
+| `situacao` | string | Não | — | Filtra por `em_andamento`/`concluida`/`falhou`/`parcial` |
 | `data_inicio` / `data_fim` | date | Não | — | Filtra por início da janela |
 | `limit` | int | Não | 100 | Máximo de janelas retornadas (até 2000) |
 
 ### Exemplo
 
 ```bash
-curl "http://127.0.0.1:8000/api/metricas/janelas?status=partial"
+curl "http://127.0.0.1:8000/api/metricas/janelas?situacao=parcial"
 ```
 
 ```json
@@ -430,19 +472,19 @@ curl "http://127.0.0.1:8000/api/metricas/janelas?status=partial"
   "registros": 1,
   "janelas": [
     {
-      "id": 1, "window_start": "2026-09-04T19:00:00Z", "window_end": "2026-09-04T20:00:00Z",
-      "status": "partial", "discovery_sample_limit": 10000,
-      "clients_discovered": 72, "clients_processed": 70,
-      "error_message": null,
-      "started_at": "2026-09-04T20:30:46Z", "finished_at": "2026-09-04T20:32:06Z"
+      "id": 1, "inicio_janela": "2026-09-04T19:00:00Z", "fim_janela": "2026-09-04T20:00:00Z",
+      "situacao": "parcial", "limite_amostra_descoberta": 10000,
+      "clientes_descobertos": 72, "clientes_processados": 70,
+      "mensagem_erro": null,
+      "iniciado_em": "2026-09-04T20:30:46Z", "finalizado_em": "2026-09-04T20:32:06Z"
     }
   ]
 }
 ```
 
-`clients_processed < clients_discovered` (status `partial`) significa que 1+ clientes falharam
-nessa janela (geralmente rede transitória, ver o risco documentado em `Context/`) — os que deram
-certo já estão salvos normalmente, só os que falharam ficaram de fora.
+`clientes_processados < clientes_descobertos` (situação `parcial`) significa que 1+ clientes
+falharam nessa janela (geralmente rede transitória, ver o risco documentado em `Context/`) — os
+que deram certo já estão salvos normalmente, só os que falharam ficaram de fora.
 
 ---
 

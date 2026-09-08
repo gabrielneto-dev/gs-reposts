@@ -9,7 +9,7 @@ from alembic import context
 
 from app.config import settings
 from app.db.base import Base
-from app.db.models import Client, ClientMetric, CollectionWindow  # noqa: F401 (registram os modelos em Base.metadata)
+from app.db.models import Cliente, Janela, MetricaCliente  # noqa: F401 (registram os modelos em Base.metadata)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

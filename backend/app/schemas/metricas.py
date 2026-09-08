@@ -8,15 +8,39 @@ class MetricaJanela(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    window_start: datetime
-    window_end: datetime
+    inicio_janela: datetime
+    fim_janela: datetime
     total_atendidas: int
     total_falhas: int
     asr_percentual: float
     acd_segundos: float | None = None
     pdd_medio_segundos: float | None = None
-    occurrences_discovery: int = Field(..., description="Ocorrências na amostra de descoberta (não o total real)")
+    ocorrencias_descoberta: int = Field(..., description="Ocorrências na amostra de descoberta (não o total real)")
     truncado: bool
+
+
+class ClienteResumo(BaseModel):
+    """Resumo de um cliente: ASR/ACD/PDD da coleta mais recente disponível."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    cliente_id: int
+    nome: str | None = None
+    inicio_janela: datetime
+    fim_janela: datetime
+    total_atendidas: int
+    total_falhas: int
+    asr_percentual: float
+    acd_segundos: float | None = None
+    pdd_medio_segundos: float | None = None
+    volume_dia: int = Field(..., description="Total de chamadas (atendidas + falhas) somado de todas as janelas coletadas HOJE")
+
+
+class ClientesResumoResponse(BaseModel):
+    """Um cliente por linha — pronta pra tabela de listagem."""
+
+    registros: int
+    clientes: list[ClienteResumo]
 
 
 class ClienteMetricasResponse(BaseModel):
@@ -35,15 +59,15 @@ class JanelaColeta(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    window_start: datetime
-    window_end: datetime
-    status: str
-    discovery_sample_limit: int
-    clients_discovered: int
-    clients_processed: int
-    error_message: str | None = None
-    started_at: datetime
-    finished_at: datetime | None = None
+    inicio_janela: datetime
+    fim_janela: datetime
+    situacao: str
+    limite_amostra_descoberta: int
+    clientes_descobertos: int
+    clientes_processados: int
+    mensagem_erro: str | None = None
+    iniciado_em: datetime
+    finalizado_em: datetime | None = None
 
 
 class JanelasResponse(BaseModel):

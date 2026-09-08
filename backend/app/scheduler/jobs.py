@@ -11,20 +11,25 @@ from app.clients.nextrouter import (
 )
 from app.config import settings
 from app.db.base import get_session
-from app.db.models import Client, ClientMetric, CollectionWindow, WindowStatus
+from app.db.models import Cliente, Janela, MetricaCliente, SituacaoJanela
 from app.routers.clientes import _buscar_clientes_por_id
 
 logger = logging.getLogger(__name__)
 
 
 def resolve_window(now: datetime) -> tuple[datetime, datetime]:
-    """Traduz o horário do disparo (sempre em ponto, entre 07h e 20h) na janela a processar:
-    overnight (20:00 de ontem -> 07:00 de hoje) quando o disparo é às 07:00, senão a hora cheia
-    anterior (disparo às H processa [H-1, H))."""
+    """Traduz o horário do disparo (sempre em ponto: 00h, e 07h-20h) na janela a processar:
+    - disparo às 00h -> janela da noite anterior, 20:00 de ontem -> 00:00 de hoje
+    - disparo às 07h -> janela da madrugada de hoje, 00:00 -> 07:00
+    - disparo às H (08h-20h) -> hora cheia anterior, [H-1, H)
+    """
 
     hoje = now.date()
-    if now.hour == 7:
+    if now.hour == 0:
         window_start = datetime.combine(hoje - timedelta(days=1), time(20, 0), tzinfo=now.tzinfo)
+        window_end = datetime.combine(hoje, time(0, 0), tzinfo=now.tzinfo)
+    elif now.hour == 7:
+        window_start = datetime.combine(hoje, time(0, 0), tzinfo=now.tzinfo)
         window_end = datetime.combine(hoje, time(7, 0), tzinfo=now.tzinfo)
     else:
         window_start = datetime.combine(hoje, time(now.hour - 1, 0), tzinfo=now.tzinfo)
@@ -61,11 +66,11 @@ async def run_collection_window(window_start: datetime, window_end: datetime) ->
     agora = datetime.now(window_start.tzinfo)
 
     async with get_session() as session:
-        janela = CollectionWindow(
-            window_start=window_start,
-            window_end=window_end,
-            discovery_sample_limit=scan_limit,
-            status=WindowStatus.RUNNING,
+        janela = Janela(
+            inicio_janela=window_start,
+            fim_janela=window_end,
+            limite_amostra_descoberta=scan_limit,
+            situacao=SituacaoJanela.EM_ANDAMENTO,
         )
         session.add(janela)
         await session.flush()
@@ -73,18 +78,18 @@ async def run_collection_window(window_start: datetime, window_end: datetime) ->
         try:
             ranking = await scan_active_customer_ids(periodo=periodo, limite_scan=scan_limit)
         except NextRouterAPIError as exc:
-            janela.status = WindowStatus.FAILED
-            janela.error_message = f"Falha na descoberta de clientes ativos: {exc.message}"
-            janela.finished_at = datetime.now(window_start.tzinfo)
+            janela.situacao = SituacaoJanela.FALHOU
+            janela.mensagem_erro = f"Falha na descoberta de clientes ativos: {exc.message}"
+            janela.finalizado_em = datetime.now(window_start.tzinfo)
             await session.commit()
             logger.error("Coleta da janela %s -> %s falhou na descoberta: %s", window_start, window_end, exc.message)
             return
 
-        janela.clients_discovered = len(ranking)
+        janela.clientes_descobertos = len(ranking)
 
         if not ranking:
-            janela.status = WindowStatus.COMPLETED
-            janela.finished_at = datetime.now(window_start.tzinfo)
+            janela.situacao = SituacaoJanela.CONCLUIDA
+            janela.finalizado_em = datetime.now(window_start.tzinfo)
             await session.commit()
             return
 
@@ -110,36 +115,44 @@ async def run_collection_window(window_start: datetime, window_end: datetime) ->
             if item:
                 nome = item.get("nome_fantasia") or item.get("razao_social")
 
-            cliente_existente = await session.get(Client, cliente_id)
+            cliente_existente = await session.get(Cliente, cliente_id)
             if cliente_existente is None:
-                session.add(Client(cliente_id=cliente_id, nome=nome, first_seen_at=agora, last_seen_at=agora, updated_at=agora))
+                session.add(
+                    Cliente(
+                        cliente_id=cliente_id,
+                        nome=nome,
+                        visto_pela_primeira_vez_em=agora,
+                        visto_pela_ultima_vez_em=agora,
+                        atualizado_em=agora,
+                    )
+                )
             else:
                 cliente_existente.nome = nome or cliente_existente.nome
-                cliente_existente.last_seen_at = agora
-                cliente_existente.updated_at = agora
+                cliente_existente.visto_pela_ultima_vez_em = agora
+                cliente_existente.atualizado_em = agora
 
             session.add(
-                ClientMetric(
-                    window_id=janela.id,
-                    window_start=window_start,
-                    window_end=window_end,
+                MetricaCliente(
+                    janela_id=janela.id,
+                    inicio_janela=window_start,
+                    fim_janela=window_end,
                     cliente_id=cliente_id,
                     total_atendidas=metricas["total_atendidas"],
                     total_falhas=metricas["total_falhas"],
                     asr_percentual=metricas["asr_percentual"],
                     acd_segundos=metricas["acd_segundos"],
                     pdd_medio_segundos=metricas["pdd_medio_segundos"],
-                    occurrences_discovery=occurrences,
+                    ocorrencias_descoberta=occurrences,
                     truncado=metricas["truncado"],
                 )
             )
-            janela.clients_processed += 1
+            janela.clientes_processados += 1
 
-        janela.status = WindowStatus.PARTIAL if houve_erro else WindowStatus.COMPLETED
-        janela.finished_at = datetime.now(window_start.tzinfo)
+        janela.situacao = SituacaoJanela.PARCIAL if houve_erro else SituacaoJanela.CONCLUIDA
+        janela.finalizado_em = datetime.now(window_start.tzinfo)
         await session.commit()
 
         logger.info(
             "Coleta da janela %s -> %s concluída (%s): %s/%s clientes processados",
-            window_start, window_end, janela.status.value, janela.clients_processed, janela.clients_discovered,
+            window_start, window_end, janela.situacao.value, janela.clientes_processados, janela.clientes_descobertos,
         )

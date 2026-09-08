@@ -23,8 +23,9 @@ async def _job() -> None:
 
 
 def start_scheduler() -> None:
-    """Liga o job de coleta (7h-20h em ponto, hora local). `SCHEDULER_ENABLED=false` desliga sem
-    remover o resto da app — útil pra rodar a API localmente sem martelar a produção sem querer."""
+    """Liga o job de coleta (00h, e 7h-20h em ponto, hora local). `SCHEDULER_ENABLED=false`
+    desliga sem remover o resto da app — útil pra rodar a API localmente sem martelar a produção
+    sem querer."""
 
     if not settings.scheduler_enabled:
         logger.info("Scheduler desabilitado (SCHEDULER_ENABLED=false)")
@@ -32,14 +33,14 @@ def start_scheduler() -> None:
 
     scheduler.add_job(
         _job,
-        trigger=CronTrigger(hour="7-20", minute=0, timezone=settings.scheduler_timezone),
+        trigger=CronTrigger(hour="0,7-20", minute=0, timezone=settings.scheduler_timezone),
         id=JOB_ID,
         max_instances=1,
         coalesce=True,
         misfire_grace_time=300,
     )
     scheduler.start()
-    logger.info("Scheduler iniciado: coleta às 7h-20h em ponto (%s)", settings.scheduler_timezone)
+    logger.info("Scheduler iniciado: coleta às 00h e 7h-20h em ponto (%s)", settings.scheduler_timezone)
 
 
 def stop_scheduler() -> None:

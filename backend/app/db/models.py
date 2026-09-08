@@ -18,73 +18,80 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 
-class WindowStatus(str, enum.Enum):
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    PARTIAL = "partial"
+class SituacaoJanela(str, enum.Enum):
+    EM_ANDAMENTO = "em_andamento"
+    CONCLUIDA = "concluida"
+    FALHOU = "falhou"
+    PARCIAL = "parcial"
 
 
-class Client(Base):
+class Cliente(Base):
     """Dimensão simples: um cliente NextRouter (`customer_id`), visto em pelo menos uma janela."""
 
-    __tablename__ = "clients"
+    __tablename__ = "clientes"
 
     cliente_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     nome: Mapped[str | None] = mapped_column(Text)
-    first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    visto_pela_primeira_vez_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    visto_pela_ultima_vez_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    atualizado_em: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
-    metrics: Mapped[list["ClientMetric"]] = relationship(back_populates="client")
+    metricas: Mapped[list["MetricaCliente"]] = relationship(back_populates="cliente")
 
 
-class CollectionWindow(Base):
+class Janela(Base):
     """Uma execução do scheduler: a janela de tempo processada e o resultado do job."""
 
-    __tablename__ = "collection_windows"
-    __table_args__ = (UniqueConstraint("window_start", "window_end", name="uq_collection_windows_range"),)
+    __tablename__ = "janelas_coleta"
+    __table_args__ = (UniqueConstraint("inicio_janela", "fim_janela", name="uq_janelas_coleta_intervalo"),)
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    window_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    discovery_sample_limit: Mapped[int] = mapped_column(Integer, nullable=False)
-    clients_discovered: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    clients_processed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    status: Mapped[WindowStatus] = mapped_column(
-        Enum(WindowStatus, name="window_status", native_enum=True, values_callable=lambda enum_cls: [member.value for member in enum_cls]),
+    inicio_janela: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    fim_janela: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    limite_amostra_descoberta: Mapped[int] = mapped_column(Integer, nullable=False)
+    clientes_descobertos: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    clientes_processados: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    situacao: Mapped[SituacaoJanela] = mapped_column(
+        Enum(
+            SituacaoJanela,
+            name="situacao_janela",
+            native_enum=True,
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
         nullable=False,
-        default=WindowStatus.RUNNING,
+        default=SituacaoJanela.EM_ANDAMENTO,
     )
-    error_message: Mapped[str | None] = mapped_column(Text)
-    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    mensagem_erro: Mapped[str | None] = mapped_column(Text)
+    iniciado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finalizado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    metrics: Mapped[list["ClientMetric"]] = relationship(back_populates="window", cascade="all, delete-orphan")
+    metricas: Mapped[list["MetricaCliente"]] = relationship(back_populates="janela", cascade="all, delete-orphan")
 
 
-class ClientMetric(Base):
+class MetricaCliente(Base):
     """ASR/ACD/PDD exatos de um cliente numa janela coletada."""
 
-    __tablename__ = "client_metrics"
+    __tablename__ = "metricas_cliente"
     __table_args__ = (
-        UniqueConstraint("cliente_id", "window_start", "window_end", name="uq_client_metrics_cliente_janela"),
+        UniqueConstraint("cliente_id", "inicio_janela", "fim_janela", name="uq_metricas_cliente_janela"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    window_id: Mapped[int] = mapped_column(ForeignKey("collection_windows.id", ondelete="CASCADE"), nullable=False)
-    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    window_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    cliente_id: Mapped[int] = mapped_column(ForeignKey("clients.cliente_id"), nullable=False)
+    janela_id: Mapped[int] = mapped_column(ForeignKey("janelas_coleta.id", ondelete="CASCADE"), nullable=False)
+    inicio_janela: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    fim_janela: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    cliente_id: Mapped[int] = mapped_column(ForeignKey("clientes.cliente_id"), nullable=False)
 
     total_atendidas: Mapped[int] = mapped_column(Integer, nullable=False)
     total_falhas: Mapped[int] = mapped_column(Integer, nullable=False)
     asr_percentual: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False)
     acd_segundos: Mapped[float | None] = mapped_column(Numeric(10, 2))
     pdd_medio_segundos: Mapped[float | None] = mapped_column(Numeric(10, 3))
-    occurrences_discovery: Mapped[int] = mapped_column(Integer, nullable=False)
+    ocorrencias_descoberta: Mapped[int] = mapped_column(Integer, nullable=False)
     truncado: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    window: Mapped["CollectionWindow"] = relationship(back_populates="metrics")
-    client: Mapped["Client"] = relationship(back_populates="metrics")
+    janela: Mapped["Janela"] = relationship(back_populates="metricas")
+    cliente: Mapped["Cliente"] = relationship(back_populates="metricas")
