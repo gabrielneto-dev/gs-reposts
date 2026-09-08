@@ -31,12 +31,15 @@ Routing layer only. See `Context/README.md` for how to use this, and `Context/ST
   - `DEC-20260904-monorepo-restructure.md` — backend/frontend split.
   - `DEC-20260904-backend-owns-storage-and-scheduler.md` — amends the above: backend also owns
     storage/scheduling now; frontend has no database.
+  - `DEC-20260908-portuguese-schema-naming.md` — all DB tables/columns and API fields are named
+    in Portuguese; standing convention, also noted in `AGENTS.md`.
 - Plans: `global/plans/` — none yet.
 - Risks: `global/risks/` — none global; see each branch's `risks/`/`_index.md` for branch-scoped risks.
 
 ## Checkpoints
 
-- Latest: `checkpoints/CP-20260904-1800-metrics-storage-and-scheduler.md`
-- Prior: `checkpoints/CP-20260904-1700-monorepo-and-frontend-scaffold.md`,
+- Latest: `checkpoints/CP-20260908-1000-clientes-page-and-pt-br-rename.md`
+- Prior: `checkpoints/CP-20260904-1800-metrics-storage-and-scheduler.md`,
+  `checkpoints/CP-20260904-1700-monorepo-and-frontend-scaffold.md`,
   `checkpoints/CP-20260904-1500-fastapi-nextrouter-mvp.md`,
   `checkpoints/CP-20260903-0000-bootstrap.md`

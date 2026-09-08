@@ -20,45 +20,60 @@ not in `frontend/`).
 
 ## Current state
 
-Working end-to-end, verified against production on 2026-09-04: migration applied, a manual run of
-the collection job for a real 1-hour window discovered 72 active clients and stored exact
-ASR/ACD/PDD for 70 of them (2 failed on a transient network error, handled gracefully — see
-`risks/RSK-20260904-transient-network-failures-during-collection.md`). The scheduler starts/stops
-cleanly with FastAPI's `lifespan` and will fire on its own once the app runs continuously.
+Working end-to-end and now consumed by a real frontend page (2026-09-08 — see
+`branches/frontend-nextjs-prisma/facts/FCT-20260908-clientes-overview-page.md`). The scheduler has
+run unattended across multiple days on the dev machine (real evidence it survives process
+restarts/reboots as long as `uvicorn` is running), accumulating 77 distinct clients by 2026-09-08.
+All table/column names and the API's JSON fields are Portuguese as of 2026-09-08 — see
+`Context/global/decisions/DEC-20260908-portuguese-schema-naming.md`. The window schedule changed
+the same day — see `decisions/DEC-20260908-collection-window-00h-split.md`.
 
 Not yet done: no automated tests, no retry-on-transient-failure, no backfill tool for missed
-windows, no frontend consumption of this data (frontend has no code calling `backend/` yet).
+windows.
 
 ## Core concepts
 
-- **Collection window schedule**: 07:00-20:00 hourly (`[07:00,08:00)` ... `[19:00,20:00)`) plus one
-  overnight window `[20:00, 07:00 next day)`. See
-  `decisions/DEC-20260904-collection-window-schedule.md`.
+- **Collection window schedule**: `[00:00,07:00)`, hourly `[07:00,08:00)` ... `[19:00,20:00)`, and
+  `[20:00,00:00)` — 15 fires/day. See `decisions/DEC-20260908-collection-window-00h-split.md`
+  (supersedes the original single-overnight-window design).
 - **Discovery is sampled, per-client metrics are exact** — a deliberate asymmetry, see
   `decisions/DEC-20260904-sampled-discovery-exact-client-metrics.md`.
+- **All naming is Portuguese** (tables, columns, enum values, API fields) — see
+  `Context/global/decisions/DEC-20260908-portuguese-schema-naming.md`. Current model names:
+  `Cliente`/`clientes`, `Janela`/`janelas_coleta`, `MetricaCliente`/`metricas_cliente`,
+  `SituacaoJanela`/`situacao_janela`.
 - **`get_exact_metrics_for_client`** (`backend/app/clients/nextrouter.py`) composes the same
   low-level calls the existing `exato=true` routes use (`get_cdr_aggregate` +
   `get_disconnection_full`) into one exact ASR+ACD+PDD result for one client in one window — the
   single reused building block between the HTTP routes and the scheduler job.
 - **`resolve_window(now)`** (`backend/app/scheduler/jobs.py`) turns "the cron fired at hour H" into
-  the actual window to process — the overnight-vs-hourly branching logic lives here, nowhere else.
+  the actual window to process — the branching logic lives here, nowhere else.
+- **`GET /api/metricas/clientes`** — one row per client for a listing UI, with `volume_dia`
+  (today's total calls, summed across windows) alongside the latest window's ASR/ACD/PDD. See
+  `facts/FCT-20260904-schema-and-reused-functions.md` for the query pattern.
 
 ## Key records
 
-- `decisions/DEC-20260904-collection-window-schedule.md`
+- `decisions/DEC-20260908-collection-window-00h-split.md` (active; supersedes
+  `DEC-20260904-collection-window-schedule.md`)
 - `decisions/DEC-20260904-sampled-discovery-exact-client-metrics.md`
-- `facts/FCT-20260904-schema-and-reused-functions.md`
+- `facts/FCT-20260904-schema-and-reused-functions.md` (kept current in place, not superseded)
 - `facts/FCT-20260904-sqlalchemy-postgres-enum-gotchas.md`
 - `risks/RSK-20260904-transient-network-failures-during-collection.md`
+- `Context/global/decisions/DEC-20260908-portuguese-schema-naming.md` (global, but defines this
+  branch's naming going forward)
 
 ## Active decisions
 
-See the `decisions/` records above — both active as of 2026-09-04.
+`decisions/DEC-20260908-collection-window-00h-split.md`,
+`decisions/DEC-20260904-sampled-discovery-exact-client-metrics.md`,
+`Context/global/decisions/DEC-20260908-portuguese-schema-naming.md`.
+`DEC-20260904-collection-window-schedule.md` is superseded — don't treat it as current.
 
 ## Open questions
 
-- None open yet — no frontend consumption designed, so no schema changes have been requested from
-  that side.
+- Whether the transient-failure retry (see the risk record) is worth building — still pending real
+  operational data.
 
 ## Risks
 

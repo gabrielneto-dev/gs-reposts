@@ -4,16 +4,20 @@ type: decision
 title: Collection windows are hourly 07:00-20:00 plus one overnight window 20:00-07:00
 branch: metrics-pipeline
 tags: [scheduler, api-design, production-safety]
-status: active
+status: superseded
 confidence: high
 created_at: 2026-09-04
-updated_at: 2026-09-04
+updated_at: 2026-09-08
 source_ids: []
 related: [CTX-FCT-20260904-cdr-api-behavior]
 depends_on: []
 supersedes: null
-superseded_by: null
+superseded_by: CTX-DEC-20260908-collection-window-00h-split
 ---
+
+> **Superseded 2026-09-08**: the user asked to split the single overnight window into two
+> same-day windows instead — see `CTX-DEC-20260908-collection-window-00h-split`. Kept for history;
+> the NextRouter multi-day quirk explanation below is still accurate background.
 
 # Decision
 

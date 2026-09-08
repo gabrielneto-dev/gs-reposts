@@ -31,6 +31,8 @@ canonical_tags:
     - scheduler
     - sqlalchemy
     - windows
+    - ui
+    - i18n
 
 statuses:
   - active

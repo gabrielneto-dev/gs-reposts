@@ -53,3 +53,21 @@ Structural changes to the memory system itself (schema, taxonomy, branch creatio
   `Context/core/constraints.md` (scheduler inherits the production-caution rules; new note on
   observed Windows async I/O flakiness).
 - Third checkpoint: `CTX-CP-20260904-1800-metrics-storage-and-scheduler`.
+
+## 2026-09-08 — Clients-overview page, schedule rework, Portuguese renaming convention
+
+- `frontend-nextjs-prisma` got its first real feature (a clients-overview table) — recorded as
+  `CTX-FCT-20260908-clientes-overview-page`, and the branch's "Active decisions" section now points
+  at the Server Component fetch-strategy choice made there instead of being empty.
+- `CTX-DEC-20260904-collection-window-schedule` superseded by
+  `CTX-DEC-20260908-collection-window-00h-split` (overnight window split into two same-day windows,
+  per the user's request).
+- New global decision `CTX-DEC-20260908-portuguese-schema-naming`: every DB table/column/enum and
+  API response field renamed English → Portuguese via a data-preserving Alembic migration. This is
+  now a standing project convention — also added to `AGENTS.md`'s (new) Conventions section, and
+  `AGENTS.md`'s Project status section was refreshed (it still described the pre-2026-09-04
+  adapter-only/Prisma architecture).
+- `CTX-FCT-20260904-schema-and-reused-functions` updated in place (not superseded) with the new
+  Portuguese table/column names and the new `/api/metricas/clientes` list endpoint.
+- Added `domain` tags: ui, i18n.
+- Fourth checkpoint: `CTX-CP-20260908-1000-clientes-page-and-pt-br-rename`.

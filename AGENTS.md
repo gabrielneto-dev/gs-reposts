@@ -56,18 +56,28 @@ Never persist secrets, passwords, access tokens, API keys, private keys, session
 
 If a durable, project-wide operating rule is discovered, evaluate whether it belongs in `AGENTS.md`. Do not put transient state or detailed knowledge in `AGENTS.md`.
 
+## Conventions
+
+- **Database tables/columns, enum values, and API JSON response fields are named in Portuguese**,
+  not English (the user does not read English comfortably). Keep any new schema or API work
+  consistent with this — see `Context/global/decisions/DEC-20260908-portuguese-schema-naming.md`
+  for the full rationale and the rename map. Internal-only Python identifiers with no DB/API
+  surface are not required to follow this.
+
 ## Project status
 
 `relatorios` is a monorepo for a VoIP telephony company's internal reporting system:
 
 - `backend/` — a FastAPI service that adapts the company's NextRouter C4 SoftSwitch API into
-  clean REST endpoints (ASR/ACD/PDD metrics, client lookups). It is an **adapter/integration
-  layer only** — it does not own a database and is not the system of record.
-- `frontend/` — the user-facing application (in progress). It owns its own database and is the
-  actual system of record; it consumes `backend/`'s adapter endpoints for softswitch data.
+  clean REST endpoints (ASR/ACD/PDD metrics, client lookups), **and** owns a Postgres database +
+  scheduler (`metrics-pipeline`) that periodically collects and stores ASR/ACD/PDD per client. It
+  is the system of record, not just an adapter.
+- `frontend/` — the user-facing application (in progress). No database of its own — a pure HTTP
+  consumer of `backend/`'s endpoints (both the live NextRouter-adapter routes and the stored
+  `metrics-pipeline` data).
 - `Context/` and this file apply to the whole monorepo, not just one side.
 
-See `Context/STATE.md` for current status and `Context/branches/nextrouter-api/_index.md` for the
-backend's technical detail.
+See `Context/STATE.md` for current status, `Context/branches/nextrouter-api/_index.md` for the
+adapter routes, and `Context/branches/metrics-pipeline/_index.md` for the storage/scheduler.
 
 <!-- CONTEXT-ENGINEERING:END -->

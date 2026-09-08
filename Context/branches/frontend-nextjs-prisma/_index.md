@@ -14,14 +14,14 @@ HTTP consumer of `backend/`'s API.
 - The Next.js app under `frontend/`
 - (Historical, superseded) Prisma 8 as the ORM — see the superseded records below, kept for
   history in case an ORM is reconsidered later
-- No integration code calling `backend/` exists yet — that's the next real piece of work here
+- `frontend/src/lib/backend.ts` — the one place that calls `backend/`'s API (server-side only)
 
 ## Current state
 
-Next.js 16 scaffold only (App Router, TypeScript, Tailwind v4) — no database, no Prisma, no real
-pages/components beyond the default starter page. `npm run build` verified clean after the Prisma
-removal on 2026-09-04 (had to also delete a leftover `prisma.config.ts` that `npm run build`'s
-typecheck caught referencing removed packages).
+Real first feature shipped 2026-09-08: a clients-overview table at `/` fed by `backend/`'s
+`/api/metricas/clientes` — see `facts/FCT-20260908-clientes-overview-page.md`. Still no database
+(by design, see `DEC-20260904-backend-owns-storage-and-scheduler`), no auth, no other pages.
+`npm run build` verified clean after every change so far.
 
 ## Core concepts
 
@@ -31,6 +31,7 @@ superseded records below.
 
 ## Key records
 
+- `facts/FCT-20260908-clientes-overview-page.md` — the first real page, architecture, decisions
 - `facts/FCT-20260904-scaffold.md` (still mostly accurate — Prisma-specific parts flagged inline)
 - `facts/FCT-20260904-prisma8-cli-behavior.md` — **superseded**
 - `facts/FCT-20260904-local-postgres.md` — **superseded** (the Postgres-17-as-a-service part is
@@ -41,15 +42,16 @@ superseded records below.
 
 ## Active decisions
 
-None active in this branch as of 2026-09-04 — see
-`Context/global/decisions/DEC-20260904-backend-owns-storage-and-scheduler.md` instead.
+`Context/global/decisions/DEC-20260904-backend-owns-storage-and-scheduler.md` (no DB here) — plus
+the fetch-strategy choice in `facts/FCT-20260908-clientes-overview-page.md` (Server Component
+fetch, not client-side — chosen specifically to avoid needing CORS on the backend).
 
 ## Open questions
 
 - No real data model defined yet for whatever UI/pages the frontend will eventually need.
 - Auth strategy for the frontend not yet decided.
-- How the frontend will fetch/display `backend/`'s reporting data (`metrics-pipeline`) — not yet
-  designed; no fetch layer exists.
+- Whether/when client-side fetching (and therefore backend CORS) will be needed — not yet, only
+  Server Components fetch `backend/` so far.
 
 ## Risks
 
@@ -57,7 +59,7 @@ None specific to this branch right now (the Prisma-RC risk is moot since Prisma 
 
 ## Relations to other branches
 
-- `nextrouter-api` — `frontend/` will eventually consume `backend/`'s HTTP endpoints for
-  softswitch data; no actual integration code exists yet.
-- `metrics-pipeline` — the reason this branch lost its database; the reporting data `frontend/`
-  will eventually display lives there.
+- `nextrouter-api` — `frontend/` could consume `backend/`'s live NextRouter-adapter routes too;
+  no integration code for those exists yet (only `metrics-pipeline`'s stored-data routes are used).
+- `metrics-pipeline` — the reason this branch lost its database, and the data source for the
+  clients-overview page (`/api/metricas/clientes`).
