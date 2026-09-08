@@ -94,7 +94,12 @@ async def atualizar_gatilho(gatilho_id: int, dados: GatilhoUpdate) -> Gatilho:
         gatilho.condicoes = _condicoes_orm(dados.condicoes)
 
         await session.commit()
-        await session.refresh(gatilho, attribute_names=["condicoes"])
+        # `atualizado_em` usa onupdate=func.now() (computado pelo Postgres): sempre que o UPDATE
+        # muda algo de verdade, o SQLAlchemy marca esse atributo como expirado. Sem incluí-lo aqui,
+        # a serialização da resposta (que acontece já fora deste `async with`, com a sessão
+        # fechada) tenta recarregar um atributo expirado sem sessão e quebra com
+        # DetachedInstanceError -> 500 — mesmo com o commit já persistido com sucesso.
+        await session.refresh(gatilho, attribute_names=["condicoes", "atualizado_em"])
         return gatilho
 
 
