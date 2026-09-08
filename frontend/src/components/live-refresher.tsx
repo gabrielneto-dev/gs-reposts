@@ -8,6 +8,7 @@ import {
   METRICAS_ATUALIZADAS_EVENT,
   type AlertasDisparadosPayload,
 } from "@/lib/metricas-event-bus";
+import { SEVERIDADE_LABEL } from "@/lib/severidade";
 
 function notificarAlertas(payload: AlertasDisparadosPayload) {
   if (typeof window === "undefined" || !("Notification" in window)) return;
@@ -15,7 +16,8 @@ function notificarAlertas(payload: AlertasDisparadosPayload) {
 
   for (const alerta of payload.alertas) {
     const cliente = alerta.cliente_nome ?? `Cliente ${alerta.cliente_id}`;
-    new Notification(`Alerta: ${cliente}`, {
+    const severidade = SEVERIDADE_LABEL[alerta.severidade] ?? alerta.severidade;
+    new Notification(`[${severidade}] ${cliente}`, {
       body: alerta.gatilho_nome ?? "Um gatilho disparou",
       tag: `alerta-${alerta.alerta_id}`,
     });

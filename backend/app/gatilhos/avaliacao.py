@@ -185,6 +185,7 @@ async def avaliar_gatilhos_da_janela(janela_id: int, cliente_ids: list[int]) -> 
                             cliente_id=cliente_id,
                             janela_id=janela_id,
                             metricas_avaliadas=[r.as_dict() for r in resultados],
+                            severidade=gatilho.severidade,
                         )
                     )
 
@@ -209,6 +210,7 @@ async def avaliar_gatilhos_da_janela(janela_id: int, cliente_ids: list[int]) -> 
                 "cliente_nome": nomes_cliente.get(alerta.cliente_id),
                 "janela_id": alerta.janela_id,
                 "metricas_avaliadas": alerta.metricas_avaliadas,
+                "severidade": alerta.severidade.value,
                 "disparado_em": alerta.disparado_em.isoformat(),
             }
             for alerta in novos_alertas

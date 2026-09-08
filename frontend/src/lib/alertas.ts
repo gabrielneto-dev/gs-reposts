@@ -1,4 +1,5 @@
 import { backendUrl } from "./backend";
+import type { SeveridadeGatilho } from "./severidade";
 
 export type CondicaoAvaliada = {
   metrica: string;
@@ -21,6 +22,7 @@ export type AlertaDisparado = {
   inicio_janela: string;
   fim_janela: string;
   metricas_avaliadas: CondicaoAvaliada[];
+  severidade: SeveridadeGatilho;
   disparado_em: string;
   visto: boolean;
   visto_em: string | null;
@@ -33,6 +35,7 @@ export type AlertasResponse = {
 
 export type ClienteComAlertaNaoVisto = {
   cliente_id: number;
+  severidade_maxima: SeveridadeGatilho;
   ultimo_alerta_nao_visto_em: string;
 };
 

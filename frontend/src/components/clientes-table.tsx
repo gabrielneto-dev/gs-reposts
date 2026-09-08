@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { ClienteResumo } from "@/lib/backend";
 import type { ClienteComAlertaNaoVisto } from "@/lib/alertas";
+import { SEVERIDADE_PONTO } from "@/lib/severidade";
 
 type SortKey = "nome" | "asr" | "acd" | "pdd" | "volume" | "coleta";
 type SortDirection = "asc" | "desc";
@@ -73,8 +74,8 @@ export function ClientesTable({
   const [sortKey, setSortKey] = useState<SortKey>("nome");
   const [sortDir, setSortDir] = useState<SortDirection>("asc");
 
-  const clientesComAlertaNaoVisto = useMemo(
-    () => new Set(alertasNaoVistos.map((a) => a.cliente_id)),
+  const severidadePorCliente = useMemo(
+    () => new Map(alertasNaoVistos.map((a) => [a.cliente_id, a.severidade_maxima])),
     [alertasNaoVistos],
   );
 
@@ -205,11 +206,11 @@ export function ClientesTable({
                           >
                             {cliente.nome ?? `Cliente ${cliente.cliente_id}`}
                           </p>
-                          {clientesComAlertaNaoVisto.has(cliente.cliente_id) && (
+                          {severidadePorCliente.has(cliente.cliente_id) && (
                             <Link
                               href={`/alertas?cliente_id=${cliente.cliente_id}`}
                               title="Tem alerta não visto — ver na central de alertas"
-                              className="inline-flex h-2 w-2 shrink-0 rounded-full bg-amber-500"
+                              className={`inline-flex h-2 w-2 shrink-0 rounded-full ${SEVERIDADE_PONTO[severidadePorCliente.get(cliente.cliente_id)!]}`}
                             />
                           )}
                         </div>

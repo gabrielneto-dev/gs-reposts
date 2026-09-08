@@ -2,7 +2,13 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.db.models import CombinadorCondicoes, DirecaoGatilho, MetricaGatilho, PeriodoReferenciaGatilho
+from app.db.models import (
+    CombinadorCondicoes,
+    DirecaoGatilho,
+    MetricaGatilho,
+    PeriodoReferenciaGatilho,
+    SeveridadeGatilho,
+)
 
 
 class CondicaoGatilhoCreate(BaseModel):
@@ -29,6 +35,9 @@ class GatilhoCreate(BaseModel):
     )
     combinador: CombinadorCondicoes = CombinadorCondicoes.E
     ativo: bool = True
+    severidade: SeveridadeGatilho = Field(
+        SeveridadeGatilho.ATENCAO, description="Gravidade do alerta quando esse gatilho dispara"
+    )
     condicoes: list[CondicaoGatilhoCreate] = Field(..., min_length=1)
 
 
@@ -36,6 +45,7 @@ class GatilhoUpdate(BaseModel):
     nome: str
     combinador: CombinadorCondicoes
     ativo: bool
+    severidade: SeveridadeGatilho
     condicoes: list[CondicaoGatilhoCreate] = Field(..., min_length=1)
 
 
@@ -47,6 +57,7 @@ class GatilhoResponse(BaseModel):
     cliente_id: int | None = None
     combinador: CombinadorCondicoes
     ativo: bool
+    severidade: SeveridadeGatilho
     criado_em: datetime
     atualizado_em: datetime
     condicoes: list[CondicaoGatilhoResponse]

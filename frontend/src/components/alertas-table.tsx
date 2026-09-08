@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { AlertaDisparado } from "@/lib/alertas";
 import { marcarAlertaVisto } from "@/lib/alertas-actions";
+import { SEVERIDADE_LABEL, SEVERIDADE_PILULA, SEVERIDADE_PONTO } from "@/lib/severidade";
 
 const formatadorData = new Intl.DateTimeFormat("pt-BR", {
   timeZone: "America/Sao_Paulo",
@@ -46,7 +47,7 @@ export function AlertasTable({ alertas }: { alertas: AlertaDisparado[] }) {
           >
             <span
               title={alerta.visto ? "Visto" : "Não visto"}
-              className={`mt-2 h-2 w-2 shrink-0 rounded-full ${alerta.visto ? "bg-zinc-200" : "bg-amber-500"}`}
+              className={`mt-2 h-2 w-2 shrink-0 rounded-full ${SEVERIDADE_PONTO[alerta.severidade]} ${alerta.visto ? "opacity-30" : ""}`}
             />
 
             <div className="min-w-0 flex-1">
@@ -56,9 +57,16 @@ export function AlertasTable({ alertas }: { alertas: AlertaDisparado[] }) {
                 className="flex w-full flex-wrap items-center justify-between gap-2 text-left"
               >
                 <div>
-                  <p className={`font-medium ${alerta.visto ? "text-zinc-500" : "text-zinc-900"}`}>
-                    {alerta.gatilho_nome}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className={`font-medium ${alerta.visto ? "text-zinc-500" : "text-zinc-900"}`}>
+                      {alerta.gatilho_nome}
+                    </p>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${SEVERIDADE_PILULA[alerta.severidade]}`}
+                    >
+                      {SEVERIDADE_LABEL[alerta.severidade]}
+                    </span>
+                  </div>
                   <p className="text-sm text-zinc-500">
                     {alerta.cliente_nome ?? `Cliente ${alerta.cliente_id}`} · ID {alerta.cliente_id}
                   </p>

@@ -1,5 +1,7 @@
 import { backendUrl } from "./backend";
+import type { SeveridadeGatilho } from "./severidade";
 
+export type { SeveridadeGatilho };
 export type CombinadorCondicoes = "e" | "ou";
 export type MetricaGatilho = "asr_percentual" | "acd_segundos" | "pdd_medio_segundos";
 export type PeriodoReferenciaGatilho = "media_ontem" | "media_semanal" | "media_mensal";
@@ -19,6 +21,7 @@ export type Gatilho = {
   cliente_id: number | null;
   combinador: CombinadorCondicoes;
   ativo: boolean;
+  severidade: SeveridadeGatilho;
   criado_em: string;
   atualizado_em: string;
   condicoes: CondicaoGatilho[];

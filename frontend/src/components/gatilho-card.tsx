@@ -5,6 +5,7 @@ import { useState } from "react";
 import { GatilhoForm } from "@/components/gatilho-form";
 import { desativarGatilho } from "@/lib/gatilhos-actions";
 import type { Gatilho } from "@/lib/gatilhos";
+import { SEVERIDADE_LABEL, SEVERIDADE_PILULA } from "@/lib/severidade";
 
 const METRICA_LABEL: Record<string, string> = {
   asr_percentual: "ASR",
@@ -40,6 +41,11 @@ export function GatilhoCard({ gatilho }: { gatilho: Gatilho }) {
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-medium text-zinc-900">{gatilho.nome}</h3>
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-medium ${SEVERIDADE_PILULA[gatilho.severidade]}`}
+            >
+              {SEVERIDADE_LABEL[gatilho.severidade]}
+            </span>
             {!gatilho.ativo && (
               <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">
                 inativo

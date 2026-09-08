@@ -3,6 +3,8 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from app.db.models import SeveridadeGatilho
+
 
 class AlertaDisparadoResponse(BaseModel):
     id: int
@@ -14,6 +16,7 @@ class AlertaDisparadoResponse(BaseModel):
     inicio_janela: datetime
     fim_janela: datetime
     metricas_avaliadas: list[dict[str, Any]]
+    severidade: SeveridadeGatilho
     disparado_em: datetime
     visto: bool
     visto_em: datetime | None = None
@@ -26,6 +29,7 @@ class AlertasResponse(BaseModel):
 
 class ClienteComAlertaNaoVisto(BaseModel):
     cliente_id: int
+    severidade_maxima: SeveridadeGatilho
     ultimo_alerta_nao_visto_em: datetime
 
 

@@ -37,6 +37,7 @@ async def criar_gatilho(dados: GatilhoCreate) -> Gatilho:
             cliente_id=dados.cliente_id,
             combinador=dados.combinador,
             ativo=dados.ativo,
+            severidade=dados.severidade,
             condicoes=_condicoes_orm(dados.condicoes),
         )
         session.add(gatilho)
@@ -89,6 +90,7 @@ async def atualizar_gatilho(gatilho_id: int, dados: GatilhoUpdate) -> Gatilho:
         gatilho.nome = dados.nome
         gatilho.combinador = dados.combinador
         gatilho.ativo = dados.ativo
+        gatilho.severidade = dados.severidade
         gatilho.condicoes = _condicoes_orm(dados.condicoes)
 
         await session.commit()

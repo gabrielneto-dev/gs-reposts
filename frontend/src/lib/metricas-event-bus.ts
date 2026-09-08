@@ -1,5 +1,7 @@
 import { EventEmitter } from "node:events";
 
+import type { SeveridadeGatilho } from "./severidade";
+
 export const METRICAS_ATUALIZADAS_EVENT = "metricas-atualizadas";
 export const ALERTAS_DISPARADOS_EVENT = "alertas-disparados";
 
@@ -20,6 +22,7 @@ export type AlertaDisparadoPayload = {
   cliente_nome: string | null;
   janela_id: number;
   metricas_avaliadas: unknown[];
+  severidade: SeveridadeGatilho;
   disparado_em: string;
 };
 

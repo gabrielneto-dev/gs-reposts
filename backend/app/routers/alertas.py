@@ -2,11 +2,11 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, Query
-from sqlalchemy import func, select
+from sqlalchemy import case, select
 
 from app.config import settings
 from app.db.base import get_session
-from app.db.models import AlertaDisparado, Cliente, Gatilho, Janela
+from app.db.models import SEVERIDADE_ORDEM, AlertaDisparado, Cliente, Gatilho, Janela
 from app.routers.metricas import _inicio_do_dia
 from app.schemas.alertas import (
     AlertaDisparadoResponse,
@@ -20,6 +20,11 @@ router = APIRouter(prefix="/api/alertas", tags=["Alertas"])
 
 MAX_REGISTROS = 2000
 
+_ORDEM_SEVERIDADE_SQL = case(
+    *[(AlertaDisparado.severidade == severidade, ordem) for severidade, ordem in SEVERIDADE_ORDEM.items()],
+    else_=0,
+)
+
 
 @router.get("", response_model=AlertasResponse)
 async def listar_alertas(
@@ -30,9 +35,9 @@ async def listar_alertas(
     data_fim: date | None = Query(None, description="Só alertas disparados até essa data (dia inteiro)"),
     limit: int = Query(200, ge=1, le=MAX_REGISTROS, description="Máximo de alertas retornados"),
 ) -> AlertasResponse:
-    """Histórico de alertas disparados — central de alertas. Ordenado do mais recente pro mais
-    antigo, com o nome da regra/cliente e o período da janela já resolvidos (sem round-trip extra
-    no frontend)."""
+    """Histórico de alertas disparados — central de alertas. Ordenado por gravidade (mais grave
+    primeiro) e, dentro da mesma gravidade, do mais recente pro mais antigo — com o nome da
+    regra/cliente e o período da janela já resolvidos (sem round-trip extra no frontend)."""
 
     async with get_session() as session:
         stmt = (
@@ -51,7 +56,7 @@ async def listar_alertas(
             stmt = stmt.where(AlertaDisparado.disparado_em >= _inicio_do_dia(data_inicio))
         if data_fim is not None:
             stmt = stmt.where(AlertaDisparado.disparado_em < _inicio_do_dia(data_fim + timedelta(days=1)))
-        stmt = stmt.order_by(AlertaDisparado.disparado_em.desc()).limit(limit)
+        stmt = stmt.order_by(_ORDEM_SEVERIDADE_SQL.desc(), AlertaDisparado.disparado_em.desc()).limit(limit)
 
         linhas = (await session.execute(stmt)).all()
 
@@ -66,6 +71,7 @@ async def listar_alertas(
             inicio_janela=inicio_janela,
             fim_janela=fim_janela,
             metricas_avaliadas=alerta.metricas_avaliadas,
+            severidade=alerta.severidade,
             disparado_em=alerta.disparado_em,
             visto=alerta.visto,
             visto_em=alerta.visto_em,
@@ -77,24 +83,31 @@ async def listar_alertas(
 
 @router.get("/nao-vistos", response_model=AlertasNaoVistosResponse)
 async def alertas_nao_vistos() -> AlertasNaoVistosResponse:
-    """Retorno leve — só cliente_id + disparo mais recente ainda não visto — feito pra alimentar o
-    badge da tabela de clientes sem puxar o corpo completo dos alertas. Sem limite de tempo: um
-    alerta continua aparecendo até alguém marcar como visto, não some sozinho depois de um tempo."""
+    """Retorno leve — cliente_id + a gravidade mais alta e o disparo mais recente entre os alertas
+    ainda não vistos — feito pra alimentar o badge (colorido pela gravidade) da tabela de clientes
+    sem puxar o corpo completo dos alertas. Sem limite de tempo: um alerta continua aparecendo até
+    alguém marcar como visto, não some sozinho depois de um tempo."""
 
     async with get_session() as session:
-        stmt = (
-            select(
-                AlertaDisparado.cliente_id,
-                func.max(AlertaDisparado.disparado_em).label("ultimo_alerta_nao_visto_em"),
-            )
-            .where(AlertaDisparado.visto.is_(False))
-            .group_by(AlertaDisparado.cliente_id)
+        stmt = select(AlertaDisparado.cliente_id, AlertaDisparado.severidade, AlertaDisparado.disparado_em).where(
+            AlertaDisparado.visto.is_(False)
         )
         linhas = (await session.execute(stmt)).all()
 
-    return AlertasNaoVistosResponse(
-        alertas=[ClienteComAlertaNaoVisto(cliente_id=cid, ultimo_alerta_nao_visto_em=ultimo) for cid, ultimo in linhas]
-    )
+    por_cliente: dict[int, ClienteComAlertaNaoVisto] = {}
+    for cliente_id, severidade, disparado_em in linhas:
+        atual = por_cliente.get(cliente_id)
+        if atual is None:
+            por_cliente[cliente_id] = ClienteComAlertaNaoVisto(
+                cliente_id=cliente_id, severidade_maxima=severidade, ultimo_alerta_nao_visto_em=disparado_em
+            )
+            continue
+        if SEVERIDADE_ORDEM[severidade] > SEVERIDADE_ORDEM[atual.severidade_maxima]:
+            atual.severidade_maxima = severidade
+        if disparado_em > atual.ultimo_alerta_nao_visto_em:
+            atual.ultimo_alerta_nao_visto_em = disparado_em
+
+    return AlertasNaoVistosResponse(alertas=list(por_cliente.values()))
 
 
 @router.post("/marcar-todos-vistos", response_model=MarcarVistoResponse)
@@ -150,6 +163,7 @@ async def marcar_alerta_visto(alerta_id: int) -> AlertaDisparadoResponse:
             inicio_janela=inicio_janela,
             fim_janela=fim_janela,
             metricas_avaliadas=alerta.metricas_avaliadas,
+            severidade=alerta.severidade,
             disparado_em=alerta.disparado_em,
             visto=alerta.visto,
             visto_em=alerta.visto_em,

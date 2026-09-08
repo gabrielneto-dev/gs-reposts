@@ -10,6 +10,7 @@ import type {
   MetricaGatilho,
   PeriodoReferenciaGatilho,
 } from "@/lib/gatilhos";
+import { SEVERIDADES, type SeveridadeGatilho } from "@/lib/severidade";
 
 const METRICAS: { value: MetricaGatilho; label: string }[] = [
   { value: "asr_percentual", label: "ASR" },
@@ -59,6 +60,7 @@ export function GatilhoForm({ gatilhoExistente }: { gatilhoExistente?: Gatilho }
   const [escopoIndividual, setEscopoIndividual] = useState(gatilhoExistente?.cliente_id != null);
   const [clienteId, setClienteId] = useState(gatilhoExistente?.cliente_id?.toString() ?? "");
   const [combinador, setCombinador] = useState<CombinadorCondicoes>(gatilhoExistente?.combinador ?? "e");
+  const [severidade, setSeveridade] = useState<SeveridadeGatilho>(gatilhoExistente?.severidade ?? "atencao");
   const [ativo, setAtivo] = useState(gatilhoExistente?.ativo ?? true);
   const [condicoes, setCondicoes] = useState<CondicaoRascunho[]>(
     gatilhoExistente?.condicoes.map((c) => ({
@@ -81,6 +83,7 @@ export function GatilhoForm({ gatilhoExistente }: { gatilhoExistente?: Gatilho }
       setEscopoIndividual(false);
       setClienteId("");
       setCombinador("e");
+      setSeveridade("atencao");
       setCondicoes([CONDICAO_PADRAO]);
     }
   }
@@ -128,6 +131,22 @@ export function GatilhoForm({ gatilhoExistente }: { gatilhoExistente?: Gatilho }
           >
             <option value="e">E (todas as condições precisam bater)</option>
             <option value="ou">OU (qualquer uma basta)</option>
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="font-medium text-zinc-700">Severidade</span>
+          <select
+            name="severidade"
+            value={severidade}
+            onChange={(e) => setSeveridade(e.target.value as SeveridadeGatilho)}
+            className={campoClasse}
+          >
+            {SEVERIDADES.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
           </select>
         </label>
       </div>

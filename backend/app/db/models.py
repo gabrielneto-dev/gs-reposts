@@ -51,6 +51,24 @@ class DirecaoGatilho(str, enum.Enum):
     QUALQUER = "qualquer"
 
 
+class SeveridadeGatilho(str, enum.Enum):
+    """Ordem crescente de gravidade — usada tanto pra exibir a cor quanto pra ordenar a central de
+    alertas (mais grave primeiro)."""
+
+    ATENCAO = "atencao"
+    MEDIO = "medio"
+    CRITICO = "critico"
+    URGENTE = "urgente"
+
+
+SEVERIDADE_ORDEM = {
+    SeveridadeGatilho.ATENCAO: 1,
+    SeveridadeGatilho.MEDIO: 2,
+    SeveridadeGatilho.CRITICO: 3,
+    SeveridadeGatilho.URGENTE: 4,
+}
+
+
 def _enum_column(enum_cls: type[enum.Enum], name: str) -> Enum:
     """Mesmo gotcha do `situacao_janela`: sem `values_callable`, o SQLAlchemy manda o *nome* do
     membro Python (ex. "AUMENTO") pro Postgres em vez do `.value` (ex. "aumento")."""
@@ -148,6 +166,11 @@ class Gatilho(Base):
         default=CombinadorCondicoes.E,
     )
     ativo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    severidade: Mapped[SeveridadeGatilho] = mapped_column(
+        _enum_column(SeveridadeGatilho, "severidade_gatilho"),
+        nullable=False,
+        default=SeveridadeGatilho.ATENCAO,
+    )
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     atualizado_em: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -197,6 +220,11 @@ class AlertaDisparado(Base):
     cliente_id: Mapped[int] = mapped_column(ForeignKey("clientes.cliente_id"), nullable=False)
     janela_id: Mapped[int] = mapped_column(ForeignKey("janelas_coleta.id", ondelete="CASCADE"), nullable=False)
     metricas_avaliadas: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False)
+    # Cópia da severidade do gatilho no momento do disparo — não muda se a regra for editada
+    # depois, pra o histórico continuar refletindo o que era grave naquela hora.
+    severidade: Mapped[SeveridadeGatilho] = mapped_column(
+        _enum_column(SeveridadeGatilho, "severidade_gatilho"), nullable=False
+    )
     disparado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     visto: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     visto_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

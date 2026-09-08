@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { backendUrl } from "./backend";
 import type { CombinadorCondicoes, DirecaoGatilho, MetricaGatilho, PeriodoReferenciaGatilho } from "./gatilhos";
+import type { SeveridadeGatilho } from "./severidade";
 
 type CondicaoInput = {
   metrica: MetricaGatilho;
@@ -28,6 +29,7 @@ export async function criarGatilho(
   const nome = String(formData.get("nome") ?? "").trim();
   const clienteIdBruto = String(formData.get("cliente_id") ?? "").trim();
   const combinador = formData.get("combinador") as CombinadorCondicoes;
+  const severidade = formData.get("severidade") as SeveridadeGatilho;
   const condicoes = condicoesDoFormData(formData);
 
   if (!nome || condicoes.length === 0) {
@@ -41,6 +43,7 @@ export async function criarGatilho(
       nome,
       cliente_id: clienteIdBruto ? Number(clienteIdBruto) : null,
       combinador,
+      severidade,
       condicoes,
     }),
   });
@@ -63,6 +66,7 @@ export async function atualizarGatilho(
   const nome = String(formData.get("nome") ?? "").trim();
   const combinador = formData.get("combinador") as CombinadorCondicoes;
   const ativo = formData.get("ativo") === "on";
+  const severidade = formData.get("severidade") as SeveridadeGatilho;
   const condicoes = condicoesDoFormData(formData);
 
   if (!nome || condicoes.length === 0) {
@@ -72,7 +76,7 @@ export async function atualizarGatilho(
   const res = await fetch(backendUrl(`/api/gatilhos/${gatilhoId}`), {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ nome, combinador, ativo, condicoes }),
+    body: JSON.stringify({ nome, combinador, ativo, severidade, condicoes }),
   });
 
   if (!res.ok) {
