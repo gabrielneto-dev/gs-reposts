@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { ClienteResumo } from "@/lib/backend";
+import type { ClienteComAlertaNaoVisto } from "@/lib/alertas";
 
 type SortKey = "nome" | "asr" | "acd" | "pdd" | "volume" | "coleta";
 type SortDirection = "asc" | "desc";
@@ -60,14 +62,21 @@ export function ClientesTable({
   clientes,
   inicio,
   fim,
+  alertasNaoVistos = [],
 }: {
   clientes: ClienteResumo[];
   inicio: string;
   fim: string;
+  alertasNaoVistos?: ClienteComAlertaNaoVisto[];
 }) {
   const [busca, setBusca] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("nome");
   const [sortDir, setSortDir] = useState<SortDirection>("asc");
+
+  const clientesComAlertaNaoVisto = useMemo(
+    () => new Set(alertasNaoVistos.map((a) => a.cliente_id)),
+    [alertasNaoVistos],
+  );
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -189,12 +198,21 @@ export function ClientesTable({
                         {iniciais(cliente.nome, cliente.cliente_id)}
                       </span>
                       <div className="min-w-0">
-                        <p
-                          className="truncate font-medium text-zinc-900"
-                          title={cliente.nome ?? undefined}
-                        >
-                          {cliente.nome ?? `Cliente ${cliente.cliente_id}`}
-                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <p
+                            className="truncate font-medium text-zinc-900"
+                            title={cliente.nome ?? undefined}
+                          >
+                            {cliente.nome ?? `Cliente ${cliente.cliente_id}`}
+                          </p>
+                          {clientesComAlertaNaoVisto.has(cliente.cliente_id) && (
+                            <Link
+                              href={`/alertas?cliente_id=${cliente.cliente_id}`}
+                              title="Tem alerta não visto — ver na central de alertas"
+                              className="inline-flex h-2 w-2 shrink-0 rounded-full bg-amber-500"
+                            />
+                          )}
+                        </div>
                         <p className="text-xs text-zinc-400">ID {cliente.cliente_id}</p>
                       </div>
                     </div>

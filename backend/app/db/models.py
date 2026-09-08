@@ -1,5 +1,6 @@
 import enum
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import (
     BigInteger,
@@ -7,12 +8,14 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     Text,
     UniqueConstraint,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -23,6 +26,36 @@ class SituacaoJanela(str, enum.Enum):
     CONCLUIDA = "concluida"
     FALHOU = "falhou"
     PARCIAL = "parcial"
+
+
+class CombinadorCondicoes(str, enum.Enum):
+    E = "e"
+    OU = "ou"
+
+
+class MetricaGatilho(str, enum.Enum):
+    ASR_PERCENTUAL = "asr_percentual"
+    ACD_SEGUNDOS = "acd_segundos"
+    PDD_MEDIO_SEGUNDOS = "pdd_medio_segundos"
+
+
+class PeriodoReferenciaGatilho(str, enum.Enum):
+    MEDIA_ONTEM = "media_ontem"
+    MEDIA_SEMANAL = "media_semanal"
+    MEDIA_MENSAL = "media_mensal"
+
+
+class DirecaoGatilho(str, enum.Enum):
+    AUMENTO = "aumento"
+    QUEDA = "queda"
+    QUALQUER = "qualquer"
+
+
+def _enum_column(enum_cls: type[enum.Enum], name: str) -> Enum:
+    """Mesmo gotcha do `situacao_janela`: sem `values_callable`, o SQLAlchemy manda o *nome* do
+    membro Python (ex. "AUMENTO") pro Postgres em vez do `.value` (ex. "aumento")."""
+
+    return Enum(enum_cls, name=name, native_enum=True, values_callable=lambda cls: [m.value for m in cls])
 
 
 class Cliente(Base):
@@ -39,6 +72,7 @@ class Cliente(Base):
     )
 
     metricas: Mapped[list["MetricaCliente"]] = relationship(back_populates="cliente")
+    gatilhos: Mapped[list["Gatilho"]] = relationship(back_populates="cliente")
 
 
 class Janela(Base):
@@ -95,3 +129,78 @@ class MetricaCliente(Base):
 
     janela: Mapped["Janela"] = relationship(back_populates="metricas")
     cliente: Mapped["Cliente"] = relationship(back_populates="metricas")
+
+
+class Gatilho(Base):
+    """Uma regra de alerta: um conjunto de condições (combinadas por `combinador`) avaliadas a
+    cada janela de coleta. `cliente_id` nulo = regra global (vale pra todo cliente); preenchido =
+    regra individual daquele cliente. Globais e individuais são sempre avaliadas juntas."""
+
+    __tablename__ = "gatilhos"
+    __table_args__ = (Index("idx_gatilhos_cliente_id", "cliente_id"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    nome: Mapped[str] = mapped_column(Text, nullable=False)
+    cliente_id: Mapped[int | None] = mapped_column(ForeignKey("clientes.cliente_id"), nullable=True)
+    combinador: Mapped[CombinadorCondicoes] = mapped_column(
+        _enum_column(CombinadorCondicoes, "combinador_condicoes"),
+        nullable=False,
+        default=CombinadorCondicoes.E,
+    )
+    ativo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    atualizado_em: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    cliente: Mapped["Cliente | None"] = relationship(back_populates="gatilhos")
+    condicoes: Mapped[list["CondicaoGatilho"]] = relationship(
+        back_populates="gatilho", cascade="all, delete-orphan"
+    )
+
+
+class CondicaoGatilho(Base):
+    """Uma comparação dentro de um gatilho: métrica atual vs. média de referência de um período
+    anterior, variação percentual numa direção, acima de um limite."""
+
+    __tablename__ = "condicoes_gatilho"
+    __table_args__ = (Index("idx_condicoes_gatilho_gatilho_id", "gatilho_id"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    gatilho_id: Mapped[int] = mapped_column(ForeignKey("gatilhos.id", ondelete="CASCADE"), nullable=False)
+    metrica: Mapped[MetricaGatilho] = mapped_column(_enum_column(MetricaGatilho, "metrica_gatilho"), nullable=False)
+    periodo_referencia: Mapped[PeriodoReferenciaGatilho] = mapped_column(
+        _enum_column(PeriodoReferenciaGatilho, "periodo_referencia_gatilho"), nullable=False
+    )
+    direcao: Mapped[DirecaoGatilho] = mapped_column(_enum_column(DirecaoGatilho, "direcao_gatilho"), nullable=False)
+    percentual_limite: Mapped[float] = mapped_column(Numeric(6, 2), nullable=False)
+    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    gatilho: Mapped["Gatilho"] = relationship(back_populates="condicoes")
+
+
+class AlertaDisparado(Base):
+    """Histórico: uma linha por disparo de um gatilho pra um cliente numa janela. `gatilho_id` não
+    tem `ondelete` — apagar uma regra que já disparou fica bloqueado por FK de propósito, pra não
+    perder histórico em silêncio (ver rota de exclusão de gatilho, que faz soft-delete)."""
+
+    __tablename__ = "alertas_disparados"
+    __table_args__ = (
+        UniqueConstraint("gatilho_id", "janela_id", "cliente_id", name="uq_alertas_disparados_gatilho_janela_cliente"),
+        Index("idx_alertas_disparados_cliente_id", "cliente_id"),
+        Index("idx_alertas_disparados_disparado_em", "disparado_em"),
+        Index("idx_alertas_disparados_visto", "visto"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    gatilho_id: Mapped[int] = mapped_column(ForeignKey("gatilhos.id"), nullable=False)
+    cliente_id: Mapped[int] = mapped_column(ForeignKey("clientes.cliente_id"), nullable=False)
+    janela_id: Mapped[int] = mapped_column(ForeignKey("janelas_coleta.id", ondelete="CASCADE"), nullable=False)
+    metricas_avaliadas: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False)
+    disparado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    visto: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    visto_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    gatilho: Mapped["Gatilho"] = relationship()
+    cliente: Mapped["Cliente"] = relationship()
+    janela: Mapped["Janela"] = relationship()

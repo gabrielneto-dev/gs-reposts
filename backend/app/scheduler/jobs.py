@@ -14,6 +14,7 @@ from app.clients.nextrouter import (
 from app.config import settings
 from app.db.base import get_session
 from app.db.models import Cliente, Janela, MetricaCliente, SituacaoJanela
+from app.gatilhos.avaliacao import avaliar_gatilhos_da_janela
 from app.routers.clientes import _buscar_clientes_por_id
 
 logger = logging.getLogger(__name__)
@@ -132,10 +133,12 @@ async def run_collection_window(window_start: datetime, window_end: datetime) ->
         )
 
         houve_erro = False
+        clientes_com_metrica: list[int] = []
         for cliente_id, occurrences, metricas in resultados:
             if metricas is None:
                 houve_erro = True
                 continue
+            clientes_com_metrica.append(cliente_id)
 
             nome = None
             item = itens_por_id.get(cliente_id)
@@ -184,3 +187,10 @@ async def run_collection_window(window_start: datetime, window_end: datetime) ->
             window_start, window_end, janela.situacao.value, janela.clientes_processados, janela.clientes_descobertos,
         )
         await _notificar_frontend(janela)
+
+    try:
+        await avaliar_gatilhos_da_janela(janela.id, clientes_com_metrica)
+    except Exception:
+        # Best-effort, igual ao webhook acima: uma falha na avaliação de gatilhos nunca pode
+        # derrubar a coleta nem corromper as métricas já commitadas.
+        logger.exception("Falha ao avaliar gatilhos da janela %s", janela.id)

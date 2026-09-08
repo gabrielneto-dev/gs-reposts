@@ -1,6 +1,7 @@
 import { ClientesTable } from "@/components/clientes-table";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { getClientesResumo, paraDatetimeLocal } from "@/lib/backend";
+import { getAlertasNaoVistos } from "@/lib/alertas";
 
 function primeiroValor(valor: string | string[] | undefined): string | undefined {
   return Array.isArray(valor) ? valor[0] : valor;
@@ -8,7 +9,10 @@ function primeiroValor(valor: string | string[] | undefined): string | undefined
 
 export default async function Page({ searchParams }: PageProps<"/">) {
   const params = await searchParams;
-  const resumo = await getClientesResumo(primeiroValor(params.inicio), primeiroValor(params.fim));
+  const [resumo, alertasNaoVistos] = await Promise.all([
+    getClientesResumo(primeiroValor(params.inicio), primeiroValor(params.fim)),
+    getAlertasNaoVistos(),
+  ]);
 
   return (
     <div className="min-h-full flex-1 bg-zinc-50 px-6 py-10 sm:px-10">
@@ -24,7 +28,12 @@ export default async function Page({ searchParams }: PageProps<"/">) {
           />
         </header>
 
-        <ClientesTable clientes={resumo.clientes} inicio={resumo.inicio} fim={resumo.fim} />
+        <ClientesTable
+          clientes={resumo.clientes}
+          inicio={resumo.inicio}
+          fim={resumo.fim}
+          alertasNaoVistos={alertasNaoVistos.alertas}
+        />
       </div>
     </div>
   );

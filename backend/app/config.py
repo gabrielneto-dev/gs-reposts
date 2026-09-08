@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     scheduler_timezone: str = "America/Sao_Paulo"
 
     frontend_webhook_url: str | None = None
+    frontend_alertas_webhook_url: str | None = None
+    alerta_webhook_url: str | None = None
 
 
 settings = Settings()
