@@ -33,6 +33,7 @@ canonical_tags:
     - windows
     - ui
     - i18n
+    - realtime
 
 statuses:
   - active

@@ -3,13 +3,13 @@ id: CTX-FCT-20260904-schema-and-reused-functions
 type: fact
 title: Postgres schema (3 tables) and the exact reuse map between routes and the scheduler job
 branch: metrics-pipeline
-tags: [postgres, scheduler, api-design]
+tags: [postgres, scheduler, api-design, realtime]
 status: active
 confidence: verified
 created_at: 2026-09-04
 updated_at: 2026-09-08
 source_ids: []
-related: [CTX-FCT-20260904-route-inventory, CTX-DEC-20260908-portuguese-schema-naming, CTX-DEC-20260908-collection-window-00h-split]
+related: [CTX-FCT-20260904-route-inventory, CTX-DEC-20260908-portuguese-schema-naming, CTX-DEC-20260908-collection-window-00h-split, CTX-DEC-20260908-clientes-resumo-period-filter, CTX-DEC-20260908-frontend-webhook-notification]
 depends_on: []
 supersedes: null
 superseded_by: null
@@ -62,13 +62,19 @@ decision for the old-English → new-Portuguese map):
 `backend/app/schemas/metricas.py`), all DB-only (never call the softswitch):
 
 - `GET /api/metricas/clientes` — one row per client, their **latest** collected window's
-  ASR/ACD/PDD, plus `volume_dia` (calls summed across **every** window collected **today**, not
-  just the latest one — a separate `GROUP BY cliente_id` query, added after the user pointed out
-  that showing only the latest window's volume was misleading). Query pattern for "latest row per
-  client": `select(MetricaCliente).distinct(MetricaCliente.cliente_id).order_by(cliente_id,
+  ASR/ACD/PDD **within an explicit `inicio`/`fim` datetime period** (default: today in full), plus
+  `volume_periodo` (calls summed across every window in that period — a separate `GROUP BY
+  cliente_id` query). Clients with no activity in the period simply don't appear. See
+  `decisions/DEC-20260908-clientes-resumo-period-filter.md` for why the period filter exists and
+  its three-shapes-in-one-session history (day → day-range → datetime-range). Query pattern for
+  "latest row per client (within a filter)": `select(MetricaCliente).where(...).distinct(cliente_id).order_by(cliente_id,
   inicio_janela.desc())` wrapped in `.subquery()`, then `aliased(MetricaCliente, subquery)` so the
   outer query can re-sort by client name — Postgres `DISTINCT ON` via SQLAlchemy's dialect-specific
   `.distinct(*cols)`. Reusable pattern for any future "latest per group" query on this schema.
+- **Frontend live-refresh**: after every `run_collection_window` terminal state, the job POSTs a
+  best-effort webhook to `FRONTEND_WEBHOOK_URL` (optional) — see
+  `decisions/DEC-20260908-frontend-webhook-notification.md`. Nothing in this branch consumes the
+  response; it's fire-and-forget.
 - `GET /api/metricas/clientes/{cliente_id}` — full time series for one client.
 - `GET /api/metricas/janelas` — scheduler run history (for monitoring, not client data).
 

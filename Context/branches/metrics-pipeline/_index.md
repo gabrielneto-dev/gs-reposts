@@ -23,10 +23,14 @@ not in `frontend/`).
 Working end-to-end and now consumed by a real frontend page (2026-09-08 — see
 `branches/frontend-nextjs-prisma/facts/FCT-20260908-clientes-overview-page.md`). The scheduler has
 run unattended across multiple days on the dev machine (real evidence it survives process
-restarts/reboots as long as `uvicorn` is running), accumulating 77 distinct clients by 2026-09-08.
-All table/column names and the API's JSON fields are Portuguese as of 2026-09-08 — see
+restarts/reboots as long as `uvicorn` is running), accumulating 90+ distinct clients by
+2026-09-08. All table/column names and the API's JSON fields are Portuguese as of 2026-09-08 — see
 `Context/global/decisions/DEC-20260908-portuguese-schema-naming.md`. The window schedule changed
-the same day — see `decisions/DEC-20260908-collection-window-00h-split.md`.
+the same day — see `decisions/DEC-20260908-collection-window-00h-split.md`. Also same day: the
+scheduler now notifies the frontend via webhook after every window (optional,
+`decisions/DEC-20260908-frontend-webhook-notification.md`), and `/api/metricas/clientes` filters
+by an explicit `inicio`/`fim` datetime period instead of always showing each client's last-ever
+window (`decisions/DEC-20260908-clientes-resumo-period-filter.md`).
 
 Not yet done: no automated tests, no retry-on-transient-failure, no backfill tool for missed
 windows.
@@ -48,15 +52,25 @@ windows.
   single reused building block between the HTTP routes and the scheduler job.
 - **`resolve_window(now)`** (`backend/app/scheduler/jobs.py`) turns "the cron fired at hour H" into
   the actual window to process — the branching logic lives here, nowhere else.
-- **`GET /api/metricas/clientes`** — one row per client for a listing UI, with `volume_dia`
-  (today's total calls, summed across windows) alongside the latest window's ASR/ACD/PDD. See
+- **`GET /api/metricas/clientes`** — one row per client for a listing UI, filtered to an explicit
+  `inicio`/`fim` datetime period (default: today in full), with `volume_periodo` (total calls
+  summed across windows in that period) alongside the latest window's ASR/ACD/PDD in the period.
+  Clients with no activity in the period don't appear. See
+  `decisions/DEC-20260908-clientes-resumo-period-filter.md` for why, and
   `facts/FCT-20260904-schema-and-reused-functions.md` for the query pattern.
+- **Frontend webhook**: after every collection window, the job best-effort POSTs to
+  `FRONTEND_WEBHOOK_URL` (optional) so the frontend can live-refresh — see
+  `decisions/DEC-20260908-frontend-webhook-notification.md`.
 
 ## Key records
 
 - `decisions/DEC-20260908-collection-window-00h-split.md` (active; supersedes
   `DEC-20260904-collection-window-schedule.md`)
 - `decisions/DEC-20260904-sampled-discovery-exact-client-metrics.md`
+- `decisions/DEC-20260908-clientes-resumo-period-filter.md` — `inicio`/`fim` datetime filter on
+  `/api/metricas/clientes`, default today
+- `decisions/DEC-20260908-frontend-webhook-notification.md` — best-effort webhook to the frontend
+  after every window
 - `facts/FCT-20260904-schema-and-reused-functions.md` (kept current in place, not superseded)
 - `facts/FCT-20260904-sqlalchemy-postgres-enum-gotchas.md`
 - `risks/RSK-20260904-transient-network-failures-during-collection.md`
@@ -67,6 +81,8 @@ windows.
 
 `decisions/DEC-20260908-collection-window-00h-split.md`,
 `decisions/DEC-20260904-sampled-discovery-exact-client-metrics.md`,
+`decisions/DEC-20260908-clientes-resumo-period-filter.md`,
+`decisions/DEC-20260908-frontend-webhook-notification.md`,
 `Context/global/decisions/DEC-20260908-portuguese-schema-naming.md`.
 `DEC-20260904-collection-window-schedule.md` is superseded — don't treat it as current.
 
@@ -90,4 +106,7 @@ windows.
   `_buscar_clientes_por_id`) and adds one new one (`get_exact_metrics_for_client`) to the same
   file. No routes were added or changed.
 - `frontend-nextjs-prisma` — that branch lost its database/ORM as a direct consequence of this one
-  existing; see `Context/global/decisions/DEC-20260904-backend-owns-storage-and-scheduler.md`.
+  existing; see `Context/global/decisions/DEC-20260904-backend-owns-storage-and-scheduler.md`. As
+  of 2026-09-08 this branch also pushes to it directly: the scheduler's webhook (see
+  `decisions/DEC-20260908-frontend-webhook-notification.md`) is consumed by
+  `branches/frontend-nextjs-prisma/decisions/DEC-20260908-sse-same-origin-live-refresh.md`.
