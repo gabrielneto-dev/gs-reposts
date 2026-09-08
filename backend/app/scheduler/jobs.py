@@ -3,6 +3,8 @@ import logging
 from datetime import datetime, time, timedelta
 from typing import Any
 
+import httpx
+
 from app.clients.nextrouter import (
     NextRouterAPIError,
     get_exact_metrics_for_client,
@@ -15,6 +17,29 @@ from app.db.models import Cliente, Janela, MetricaCliente, SituacaoJanela
 from app.routers.clientes import _buscar_clientes_por_id
 
 logger = logging.getLogger(__name__)
+
+
+async def _notificar_frontend(janela: Janela) -> None:
+    """Avisa o frontend (se configurado) que uma janela terminou, pra ele atualizar a tela sem
+    precisar de reload manual. Best-effort: falha aqui nunca deve derrubar o job de coleta."""
+
+    url = settings.frontend_webhook_url
+    if not url:
+        return
+
+    payload = {
+        "janela_id": janela.id,
+        "inicio_janela": janela.inicio_janela.isoformat(),
+        "fim_janela": janela.fim_janela.isoformat(),
+        "situacao": janela.situacao.value,
+        "clientes_descobertos": janela.clientes_descobertos,
+        "clientes_processados": janela.clientes_processados,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            await client.post(url, json=payload)
+    except httpx.HTTPError as exc:
+        logger.warning("Falha ao notificar o frontend via webhook (%s): %s", url, exc)
 
 
 def resolve_window(now: datetime) -> tuple[datetime, datetime]:
@@ -83,6 +108,7 @@ async def run_collection_window(window_start: datetime, window_end: datetime) ->
             janela.finalizado_em = datetime.now(window_start.tzinfo)
             await session.commit()
             logger.error("Coleta da janela %s -> %s falhou na descoberta: %s", window_start, window_end, exc.message)
+            await _notificar_frontend(janela)
             return
 
         janela.clientes_descobertos = len(ranking)
@@ -91,6 +117,7 @@ async def run_collection_window(window_start: datetime, window_end: datetime) ->
             janela.situacao = SituacaoJanela.CONCLUIDA
             janela.finalizado_em = datetime.now(window_start.tzinfo)
             await session.commit()
+            await _notificar_frontend(janela)
             return
 
         try:
@@ -156,3 +183,4 @@ async def run_collection_window(window_start: datetime, window_end: datetime) ->
             "Coleta da janela %s -> %s concluída (%s): %s/%s clientes processados",
             window_start, window_end, janela.situacao.value, janela.clientes_processados, janela.clientes_descobertos,
         )
+        await _notificar_frontend(janela)

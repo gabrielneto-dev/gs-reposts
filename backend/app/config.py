@@ -15,5 +15,7 @@ class Settings(BaseSettings):
     scheduler_client_concurrency: int = 5
     scheduler_timezone: str = "America/Sao_Paulo"
 
+    frontend_webhook_url: str | None = None
+
 
 settings = Settings()
