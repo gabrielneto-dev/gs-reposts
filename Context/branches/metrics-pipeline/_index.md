@@ -30,7 +30,11 @@ the same day — see `decisions/DEC-20260908-collection-window-00h-split.md`. Al
 scheduler now notifies the frontend via webhook after every window (optional,
 `decisions/DEC-20260908-frontend-webhook-notification.md`), and `/api/metricas/clientes` filters
 by an explicit `inicio`/`fim` datetime period instead of always showing each client's last-ever
-window (`decisions/DEC-20260908-clientes-resumo-period-filter.md`).
+window (`decisions/DEC-20260908-clientes-resumo-period-filter.md`). Both were verified live the
+same day with real production data (`checkpoints/CP-20260908-1700-live-verification-and-process-cleanup.md`)
+— found and fixed a wrong webhook port and a duplicate running scheduler in the process, see
+`facts/FCT-20260908-duplicate-backend-processes-found.md`. The dev backend is now a single clean
+instance.
 
 Not yet done: no automated tests, no retry-on-transient-failure, no backfill tool for missed
 windows.
@@ -73,6 +77,8 @@ windows.
   after every window
 - `facts/FCT-20260904-schema-and-reused-functions.md` (kept current in place, not superseded)
 - `facts/FCT-20260904-sqlalchemy-postgres-enum-gotchas.md`
+- `facts/FCT-20260908-duplicate-backend-processes-found.md` — two schedulers were found running at
+  once; also documents the Windows `uvicorn --reload` global-vs-venv-Python quirk
 - `risks/RSK-20260904-transient-network-failures-during-collection.md`
 - `Context/global/decisions/DEC-20260908-portuguese-schema-naming.md` (global, but defines this
   branch's naming going forward)
@@ -98,6 +104,11 @@ windows.
   job already tolerates per-client failures (marks the window `partial`), but there's no retry yet.
 - Same production-caution constraint as `nextrouter-api` applies here: the scheduler calls the real
   production softswitch on a fixed schedule, unattended — see `Context/core/constraints.md`.
+- Re-running `start-dev.ps1` without checking for an already-open backend window can leave two
+  scheduler instances running at once (happened once, see
+  `facts/FCT-20260908-duplicate-backend-processes-found.md`) — check
+  `Get-CimInstance Win32_Process` for existing `uvicorn app.main` processes before starting a new
+  one. See `Context/core/constraints.md`'s "Dev-server process management" section.
 
 ## Relations to other branches
 

@@ -59,6 +59,17 @@ production-safety risk for the scheduler, which already has to be conservative (
   webhook fires), and the next successful window's webhook (or a manual reload) catches it up.
 - No authentication on the webhook call — acceptable given both sides run on the same trusted
   local/internal network today; revisit if the frontend is ever exposed publicly.
+- **Hit in practice the same day**: `FRONTEND_WEBHOOK_URL` is a fixed URL, but the frontend's dev
+  port isn't fixed — `start-dev.ps1` runs `npm run dev` with no `--port`, so if the default 3000 is
+  already taken, Next.js silently increments to 3001/3002/... The webhook then fails every single
+  time with no visible symptom beyond a log warning (by design, per the point above) — the
+  scheduler and the UI both look completely healthy. Found via live end-to-end verification
+  (`checkpoints/CP-20260908-1700-live-verification-and-process-cleanup.md`): `.env` had `:3010`
+  (copied from an unrelated Browser-tool launch config), the real frontend was on `:3001`. Fixed by
+  correcting `.env` + `.env.example` (now defaults to `:3000`, with a warning comment). **There is
+  no code fix for the underlying drift** — whoever runs `start-dev.ps1` should check the frontend
+  terminal's actual port and keep `FRONTEND_WEBHOOK_URL` in sync, or fix the frontend's port with
+  `next dev --port 3000` if this becomes a recurring papercut.
 
 ## Related records
 

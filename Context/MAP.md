@@ -38,8 +38,9 @@ Routing layer only. See `Context/README.md` for how to use this, and `Context/ST
 
 ## Checkpoints
 
-- Latest: `checkpoints/CP-20260908-1600-live-refresh-and-datetime-filter.md`
-- Prior: `checkpoints/CP-20260908-1000-clientes-page-and-pt-br-rename.md`,
+- Latest: `checkpoints/CP-20260908-1700-live-verification-and-process-cleanup.md`
+- Prior: `checkpoints/CP-20260908-1600-live-refresh-and-datetime-filter.md`,
+  `checkpoints/CP-20260908-1000-clientes-page-and-pt-br-rename.md`,
   `checkpoints/CP-20260904-1800-metrics-storage-and-scheduler.md`,
   `checkpoints/CP-20260904-1700-monorepo-and-frontend-scaffold.md`,
   `checkpoints/CP-20260904-1500-fastapi-nextrouter-mvp.md`,

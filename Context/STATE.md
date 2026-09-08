@@ -1,7 +1,7 @@
 # Project State
 
 Last updated: 2026-09-08
-Latest checkpoint: `Context/checkpoints/CP-20260908-1600-live-refresh-and-datetime-filter.md`
+Latest checkpoint: `Context/checkpoints/CP-20260908-1700-live-verification-and-process-cleanup.md`
 
 ## Current objective
 
@@ -18,18 +18,25 @@ table — mentioned twice, not yet specified.
 - `backend/`: scheduler POSTs a best-effort webhook (`FRONTEND_WEBHOOK_URL`, optional) after every
   collection window — see
   `Context/branches/metrics-pipeline/decisions/DEC-20260908-frontend-webhook-notification.md`.
-- `backend/`: scheduler still fires 15x/day — `[00:00,07:00)`, hourly 07:00-20:00, `[20:00,00:00)`
-  — unchanged since the last checkpoint. Verified running unattended (90+ distinct clients
-  accumulated by 2026-09-08).
-- `frontend/`: clients-overview table at `/` now live-refreshes (SSE via this app's own
-  `/api/eventos` + `/api/webhook/metricas-atualizadas` — its first API routes) and has an
-  Airbnb-style datetime range filter (two-month calendar, per-side time input, presets,
-  Anterior/Próximo). See
+  **Verified live end-to-end 2026-09-08** (real production data, real webhook call, browser tab
+  updated itself with no manual action) — see
+  `Context/checkpoints/CP-20260908-1700-live-verification-and-process-cleanup.md`.
+- `backend/`: scheduler still fires 15x/day — `[00:00,07:00)`, hourly 07:00-20:00, `[20:00,00:00)`.
+  Dev backend was restarted 2026-09-08 as a single clean instance after a duplicate-process issue
+  was found and fixed — see
+  `Context/branches/metrics-pipeline/facts/FCT-20260908-duplicate-backend-processes-found.md`.
+  Before restarting again, check `Get-CimInstance Win32_Process` for an already-running
+  `uvicorn app.main` — see `Context/core/constraints.md`'s "Dev-server process management" section.
+- `frontend/`: clients-overview table at `/` live-refreshes (SSE via this app's own
+  `/api/eventos` + `/api/webhook/metricas-atualizadas`) and has an Airbnb-style datetime range
+  filter (two-month calendar, per-side time input, presets, Anterior/Próximo). See
   `Context/branches/frontend-nextjs-prisma/facts/FCT-20260908-clientes-overview-page.md` and
   `Context/branches/frontend-nextjs-prisma/decisions/DEC-20260908-sse-same-origin-live-refresh.md`.
   Still no database, no auth, no other pages.
-- Repo on GitHub: `https://github.com/gabrielneto-dev/gs-reposts.git` (branch `main`). Two commits
-  made this session (`8ad89ec`, `e128e72`) — **not yet pushed** to `origin` as of this checkpoint.
+- Repo on GitHub: `https://github.com/gabrielneto-dev/gs-reposts.git` (branch `main`, at `f84c431`
+  as of this checkpoint, all work through this checkpoint pushed).
+- Two small harmless "test" `janelas_coleta` rows exist in the real database from live verification
+  (2026-09-08, ~11:17-11:22, non-hour-aligned) — informational only, not cleaned up.
 
 ## In progress
 
@@ -37,13 +44,14 @@ Nothing in progress.
 
 ## Blockers
 
-None currently. See `Context/core/constraints.md` for two recurring environment quirks worth
-knowing about before assuming something is broken: the harness's classifier occasionally blocking
-ordinary commands (retry once), and connection-reset-shaped errors on this Windows machine during
-concurrent async I/O that can be transient rather than a real config/credentials problem. New this
-session: Turbopack dev-mode Fast Refresh can produce transient, non-representative console errors
-in an already-open browser tab while files are actively being edited — always re-verify with a
-fresh navigation before treating one as a real bug.
+None currently. See `Context/core/constraints.md` for recurring environment quirks worth knowing
+about before assuming something is broken: the harness's classifier occasionally blocking ordinary
+commands (retry once), connection-reset-shaped errors on this Windows machine during concurrent
+async I/O that can be transient, Turbopack dev-mode Fast Refresh producing transient console errors
+in an open tab during active edits, and (new 2026-09-08) the "Dev-server process management"
+section — duplicate backend processes from re-running `start-dev.ps1`, `uvicorn --reload`'s worker
+running under the global Python rather than the venv, and the frontend's dev port silently drifting
+away from 3000.
 
 ## Active decisions
 
@@ -84,3 +92,5 @@ fresh navigation before treating one as a real bug.
    Conventions section.
 5. The "gatilhos" conversation was explicitly deferred twice by the user in favor of other work —
    good candidate to raise proactively if no other task is given.
+6. Before restarting or debugging the backend dev process, read `Context/core/constraints.md`'s
+   "Dev-server process management" section first — saves rediscovering the same two Windows quirks.

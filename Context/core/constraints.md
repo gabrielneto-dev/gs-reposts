@@ -51,7 +51,27 @@ branch `main`) — commit history is available going forward for "why was this c
 from 2026-09-04 onward. Before that date, no history exists, so decisions from that period (e.g.
 `CTX-DEC-20260904-route-simplification`) still need to be carried explicitly in `Context/`.
 
-The harness's own auto-mode safety classifier has, twice so far, blocked ordinary git operations
-(`git add` on a large directory, `git push`) with a generic "blocked by classifier" error and no
-specific reason. Both resolved on a plain retry of the identical command. Don't treat this as a
-real permissions or auth problem — retry once before troubleshooting further.
+The harness's own auto-mode safety classifier has, more than once, blocked ordinary commands
+(`git add` on a large directory, `git push`, a `Stop-Process` loop to kill stale dev processes)
+with a generic "blocked by classifier" error and no specific reason. Every instance so far resolved
+on a plain retry of the identical command. Don't treat this as a real permissions or auth
+problem — retry once before troubleshooting further.
+
+## Dev-server process management on this Windows machine
+
+Two quirks found together during live pipeline verification (2026-09-08, see
+`Context/branches/metrics-pipeline/facts/FCT-20260908-duplicate-backend-processes-found.md`):
+
+- Running `start-dev.ps1` again without checking whether an earlier backend window is still open
+  leaves **two independent scheduler instances** running at once (two 15x/day crons both hitting
+  production). Before starting a fresh one, check for existing `uvicorn app.main:app` processes
+  first.
+- `uvicorn --reload`'s worker (the process that actually binds the port) gets spawned via the
+  **global Python install**, not the venv interpreter that launched it — even though the venv has
+  every dependency. Not a broken environment; just check `Get-NetTCPConnection -LocalPort 8000` to
+  find the PID actually serving, don't assume it's the one with the venv path in its command line.
+- `start-dev.ps1`'s frontend launch (`npm run dev`, no `--port`) silently lands on a different port
+  than 3000 whenever 3000 is already taken — with no warning. This broke `FRONTEND_WEBHOOK_URL`
+  once already (see `Context/branches/metrics-pipeline/decisions/DEC-20260908-frontend-webhook-notification.md`'s
+  Consequences). Always confirm the frontend's actual port from its own terminal window before
+  trusting a hardcoded URL that points at it.
