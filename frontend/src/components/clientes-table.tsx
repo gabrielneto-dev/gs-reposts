@@ -52,7 +52,19 @@ function formatarColeta(windowEndIso: string): string {
   return formatadorData.format(new Date(windowEndIso));
 }
 
-export function ClientesTable({ clientes }: { clientes: ClienteResumo[] }) {
+function formatarPeriodo(inicioIso: string, fimIso: string): string {
+  return `${formatadorData.format(new Date(inicioIso))} – ${formatadorData.format(new Date(fimIso))}`;
+}
+
+export function ClientesTable({
+  clientes,
+  inicio,
+  fim,
+}: {
+  clientes: ClienteResumo[];
+  inicio: string;
+  fim: string;
+}) {
   const [busca, setBusca] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("nome");
   const [sortDir, setSortDir] = useState<SortDirection>("asc");
@@ -79,7 +91,7 @@ export function ClientesTable({ clientes }: { clientes: ClienteResumo[] }) {
         case "pdd":
           return ((a.pdd_medio_segundos ?? -1) - (b.pdd_medio_segundos ?? -1)) * dir;
         case "volume":
-          return (a.volume_dia - b.volume_dia) * dir;
+          return (a.volume_periodo - b.volume_periodo) * dir;
         case "coleta":
           return (
             (new Date(a.fim_janela).getTime() - new Date(b.fim_janela).getTime()) * dir
@@ -131,7 +143,7 @@ export function ClientesTable({ clientes }: { clientes: ClienteResumo[] }) {
                 className="pl-6"
               />
               <Th
-                label="Volume (hoje)"
+                label={`Volume (${formatarPeriodo(inicio, fim)})`}
                 onClick={() => alternarOrdenacao("volume")}
                 active={sortKey === "volume"}
                 dir={sortDir}
@@ -188,7 +200,7 @@ export function ClientesTable({ clientes }: { clientes: ClienteResumo[] }) {
                     </div>
                   </td>
                   <td className="py-3 pr-4 text-zinc-600">
-                    {cliente.volume_dia.toLocaleString("pt-BR")}
+                    {cliente.volume_periodo.toLocaleString("pt-BR")}
                   </td>
                   <td className="py-3 pr-4">
                     <span className="font-medium text-zinc-900">
@@ -210,7 +222,9 @@ export function ClientesTable({ clientes }: { clientes: ClienteResumo[] }) {
 
         {filtrados.length === 0 && (
           <p className="px-6 py-10 text-center text-sm text-zinc-400">
-            Nenhum cliente encontrado para &quot;{busca}&quot;.
+            {busca
+              ? `Nenhum cliente encontrado para "${busca}".`
+              : `Nenhum cliente com coleta em ${formatarPeriodo(inicio, fim)}.`}
           </p>
         )}
       </div>

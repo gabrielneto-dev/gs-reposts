@@ -33,12 +33,14 @@ class ClienteResumo(BaseModel):
     asr_percentual: float
     acd_segundos: float | None = None
     pdd_medio_segundos: float | None = None
-    volume_dia: int = Field(..., description="Total de chamadas (atendidas + falhas) somado de todas as janelas coletadas HOJE")
+    volume_periodo: int = Field(..., description="Total de chamadas (atendidas + falhas) somado de todas as janelas do período filtrado")
 
 
 class ClientesResumoResponse(BaseModel):
     """Um cliente por linha — pronta pra tabela de listagem."""
 
+    inicio: datetime = Field(..., description="Início do período ao qual esta listagem está filtrada (default: início de hoje)")
+    fim: datetime = Field(..., description="Fim do período ao qual esta listagem está filtrada (default: início de amanhã)")
     registros: int
     clientes: list[ClienteResumo]
 

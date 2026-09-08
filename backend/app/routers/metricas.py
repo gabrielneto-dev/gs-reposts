@@ -26,21 +26,38 @@ def _inicio_do_dia(dia: date) -> datetime:
     return datetime.combine(dia, time.min, tzinfo=ZoneInfo(settings.scheduler_timezone))
 
 
+def _com_timezone(momento: datetime, tz: ZoneInfo) -> datetime:
+    """Datetime vindo de query param pode chegar sem timezone (ex: <input type="datetime-local">
+    manda "2026-09-08T12:00" puro) — nesse caso assume o fuso operacional do sistema."""
+
+    return momento if momento.tzinfo is not None else momento.replace(tzinfo=tz)
+
+
 @router.get("/clientes", response_model=ClientesResumoResponse)
 async def resumo_clientes(
+    inicio: datetime | None = Query(None, description="Início do período (inclusive); default é o início de hoje"),
+    fim: datetime | None = Query(None, description="Fim do período (exclusive); default é o início de amanhã"),
     limit: int = Query(200, ge=1, le=MAX_REGISTROS, description="Máximo de clientes retornados"),
 ) -> ClientesResumoResponse:
-    """Um cliente por linha: ASR/ACD/PDD da janela mais recente já coletada pelo scheduler, mais
-    `volume_dia` (chamadas somadas de todas as janelas coletadas HOJE — não só a última janela).
-    Não faz nenhuma chamada ao softswitch. Só aparecem clientes com pelo menos uma coleta feita.
-    Ordenado por nome."""
+    """Um cliente por linha: ASR/ACD/PDD da janela mais recente coletada NO PERÍODO FILTRADO
+    (default: hoje inteiro), mais `volume_periodo` (chamadas somadas de todas as janelas do
+    período). Não faz nenhuma chamada ao softswitch. Só aparecem clientes com pelo menos uma
+    coleta feita no período — clientes sem chamada nesse intervalo simplesmente não entram na
+    lista. Ordenado por nome."""
 
-    hoje = datetime.now(ZoneInfo(settings.scheduler_timezone)).date()
-    inicio_hoje = _inicio_do_dia(hoje)
+    tz = ZoneInfo(settings.scheduler_timezone)
+    hoje = datetime.now(tz).date()
+
+    inicio_periodo = _com_timezone(inicio, tz) if inicio is not None else _inicio_do_dia(hoje)
+    fim_periodo = _com_timezone(fim, tz) if fim is not None else _inicio_do_dia(hoje + timedelta(days=1))
+
+    if inicio_periodo >= fim_periodo:
+        raise HTTPException(400, "inicio deve ser antes de fim")
 
     async with get_session() as session:
         ultima_por_cliente = (
             select(MetricaCliente)
+            .where(MetricaCliente.fim_janela >= inicio_periodo, MetricaCliente.fim_janela < fim_periodo)
             .distinct(MetricaCliente.cliente_id)
             .order_by(MetricaCliente.cliente_id, MetricaCliente.inicio_janela.desc())
             .subquery()
@@ -61,7 +78,7 @@ async def resumo_clientes(
                 MetricaCliente.cliente_id,
                 func.sum(MetricaCliente.total_atendidas + MetricaCliente.total_falhas).label("volume"),
             )
-            .where(MetricaCliente.fim_janela >= inicio_hoje)
+            .where(MetricaCliente.fim_janela >= inicio_periodo, MetricaCliente.fim_janela < fim_periodo)
             .group_by(MetricaCliente.cliente_id)
         )
         volume_por_cliente = {
@@ -79,12 +96,14 @@ async def resumo_clientes(
             asr_percentual=metrica.asr_percentual,
             acd_segundos=metrica.acd_segundos,
             pdd_medio_segundos=metrica.pdd_medio_segundos,
-            volume_dia=volume_por_cliente.get(metrica.cliente_id, 0),
+            volume_periodo=volume_por_cliente.get(metrica.cliente_id, 0),
         )
         for metrica, nome in linhas
     ]
 
-    return ClientesResumoResponse(registros=len(clientes), clientes=clientes)
+    return ClientesResumoResponse(
+        inicio=inicio_periodo, fim=fim_periodo, registros=len(clientes), clientes=clientes
+    )
 
 
 @router.get("/clientes/{cliente_id}", response_model=ClienteMetricasResponse)
