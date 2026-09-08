@@ -20,4 +20,6 @@ class Settings(BaseSettings):
     alerta_webhook_url: str | None = None
 
 
+# Instância única — módulo reimportado do zero a cada restart do worker (`--reload` picks up
+# .env changes indiretamente assim, já que ele mesmo só observa *.py).
 settings = Settings()
