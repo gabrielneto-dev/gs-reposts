@@ -19,6 +19,12 @@ from app.routers.clientes import _buscar_clientes_por_id
 
 logger = logging.getLogger(__name__)
 
+# Trava única pra qualquer coleta (automática do scheduler OU disparada manualmente pela tela de
+# janelas): evita duas buscas concorrentes na API real de produção. O `max_instances=1` do
+# APScheduler só cobre disparos automáticos entre si — isso aqui cobre automático-vs-manual e
+# manual-vs-manual também.
+coleta_em_andamento = asyncio.Lock()
+
 
 async def _notificar_frontend(janela: Janela) -> None:
     """Avisa o frontend (se configurado) que uma janela terminou, pra ele atualizar a tela sem

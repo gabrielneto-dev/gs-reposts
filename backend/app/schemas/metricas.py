@@ -75,3 +75,38 @@ class JanelaColeta(BaseModel):
 class JanelasResponse(BaseModel):
     registros: int
     janelas: list[JanelaColeta]
+
+
+class SlotJanela(BaseModel):
+    """Um dos 15 slots canônicos de um dia (00-07, hora em hora 07-20, 20-00). `situacao` inclui os
+    valores reais de `SituacaoJanela` mais dois estados sintéticos que não existem no banco:
+    `faltando` (já passou e não tem `Janela` nenhuma — pode disparar manualmente) e `futuro`
+    (ainda não chegou — bloqueado)."""
+
+    inicio_janela: datetime
+    fim_janela: datetime
+    situacao: str
+    janela_id: int | None = None
+    clientes_descobertos: int | None = None
+    clientes_processados: int | None = None
+    mensagem_erro: str | None = None
+    pode_disparar: bool
+
+
+class DiaGrade(BaseModel):
+    data: str = Field(..., description="Data no formato YYYY-MM-DD (fuso operacional)")
+    janelas: list[SlotJanela]
+
+
+class GradeJanelasResponse(BaseModel):
+    dias: list[DiaGrade]
+
+
+class DispararJanelaRequest(BaseModel):
+    inicio_janela: datetime
+    fim_janela: datetime
+
+
+class DispararJanelaResponse(BaseModel):
+    ok: bool
+    mensagem: str

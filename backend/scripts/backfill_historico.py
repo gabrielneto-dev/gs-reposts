@@ -17,34 +17,20 @@ sessão só). Só GET, mas é bastante volume de chamadas — por isso o `--paus
 import argparse
 import asyncio
 import logging
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 
 from app.db.base import get_session
 from app.db.models import Janela
+from app.scheduler.grade import janelas_do_dia
 from app.scheduler.jobs import run_collection_window
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("backfill")
 
 TZ = ZoneInfo("America/Sao_Paulo")
-
-
-def janelas_do_dia(dia: date) -> list[tuple[datetime, datetime]]:
-    """Mesma grade do scheduler (ver `resolve_window` em app/scheduler/jobs.py):
-    [00h,07h), hora em hora [07h,20h), [20h,00h) — 15 janelas por dia."""
-
-    janelas = [(datetime.combine(dia, time(0, 0), tzinfo=TZ), datetime.combine(dia, time(7, 0), tzinfo=TZ))]
-    for hora in range(7, 20):
-        janelas.append(
-            (datetime.combine(dia, time(hora, 0), tzinfo=TZ), datetime.combine(dia, time(hora + 1, 0), tzinfo=TZ))
-        )
-    janelas.append(
-        (datetime.combine(dia, time(20, 0), tzinfo=TZ), datetime.combine(dia + timedelta(days=1), time(0, 0), tzinfo=TZ))
-    )
-    return janelas
 
 
 async def janela_ja_existe(window_start: datetime, window_end: datetime) -> bool:
@@ -65,7 +51,7 @@ async def main(dias: int, pausa_segundos: float, dia_especifico: date | None) ->
     todas_janelas = [
         (window_start, window_end)
         for dia in dias_a_processar
-        for window_start, window_end in janelas_do_dia(dia)
+        for window_start, window_end in janelas_do_dia(dia, TZ)
         if window_end <= agora
     ]
 

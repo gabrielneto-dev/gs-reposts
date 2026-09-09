@@ -6,7 +6,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from app.config import settings
-from app.scheduler.jobs import resolve_window, run_collection_window
+from app.scheduler.jobs import coleta_em_andamento, resolve_window, run_collection_window
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,10 @@ async def _job() -> None:
     now = datetime.now(ZoneInfo(settings.scheduler_timezone)).replace(minute=0, second=0, microsecond=0)
     window_start, window_end = resolve_window(now)
     logger.info("Disparo do scheduler às %s: coletando janela %s -> %s", now, window_start, window_end)
-    await run_collection_window(window_start, window_end)
+    # Se tiver um disparo manual em andamento (ver /api/metricas/janelas/disparar), espera ele
+    # terminar em vez de rodar por cima — nunca duas coletas batendo na API real ao mesmo tempo.
+    async with coleta_em_andamento:
+        await run_collection_window(window_start, window_end)
 
 
 def start_scheduler() -> None:

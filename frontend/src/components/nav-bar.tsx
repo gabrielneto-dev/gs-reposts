@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/", label: "Relatórios" },
   { href: "/gatilhos", label: "Gatilhos" },
   { href: "/alertas", label: "Central de alertas" },
+  { href: "/janelas", label: "Janelas" },
 ];
 
 export function NavBar() {

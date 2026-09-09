@@ -3,31 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-const NOMES_MES = [
-  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
-  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
-];
-const DIAS_SEMANA = ["D", "S", "T", "Q", "Q", "S", "S"];
+import { NOMES_MES, DIAS_SEMANA, addDias, addMeses, gerarCelulasDoMes, inicioDoDia, mesmoDia } from "@/lib/calendario";
 
 const pad = (n: number) => String(n).padStart(2, "0");
-
-function inicioDoDia(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
-function mesmoDia(a: Date | null, b: Date | null): boolean {
-  return (
-    !!a && !!b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
-  );
-}
-
-function addMeses(mes: Date, n: number): Date {
-  return new Date(mes.getFullYear(), mes.getMonth() + n, 1);
-}
-
-function addDias(d: Date, n: number): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
-}
 
 /** Datetime-local ("2026-09-08T09:00") -> Date, sem passar pelo parser de fuso do JS. */
 function datetimeLocalParaDate(s: string): Date {
@@ -43,18 +21,6 @@ function dateParaDatetimeLocal(dia: Date, hora: string): string {
 
 function horaDe(d: Date): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function gerarCelulasDoMes(mes: Date): (Date | null)[] {
-  const ano = mes.getFullYear();
-  const mesIndex = mes.getMonth();
-  const primeiroDiaSemana = new Date(ano, mesIndex, 1).getDay();
-  const totalDias = new Date(ano, mesIndex + 1, 0).getDate();
-
-  const celulas: (Date | null)[] = [];
-  for (let i = 0; i < primeiroDiaSemana; i++) celulas.push(null);
-  for (let dia = 1; dia <= totalDias; dia++) celulas.push(new Date(ano, mesIndex, dia));
-  return celulas;
 }
 
 const botaoNavClassName =
