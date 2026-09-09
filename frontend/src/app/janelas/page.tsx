@@ -4,10 +4,11 @@ import { DiaJanelas } from "@/components/dia-janelas";
 import { SemanaJanelas } from "@/components/semana-janelas";
 import { MesJanelas } from "@/components/mes-janelas";
 import { getGradeJanelas } from "@/lib/janelas";
-import { addDias, addMeses, dataISO, dataISOParaDate, inicioDoDia } from "@/lib/calendario";
+import { addDias, addMeses, dataISO, dataISOParaDate, inicioDoDia, mesmoDia, NOMES_MES } from "@/lib/calendario";
 
 type Visao = "dia" | "semana" | "mes";
 const VISOES: Visao[] = ["dia", "semana", "mes"];
+const VISAO_LABEL: Record<Visao, string> = { dia: "Dia", semana: "Semana", mes: "Mês" };
 
 function primeiroValor(valor: string | string[] | undefined): string | undefined {
   return Array.isArray(valor) ? valor[0] : valor;
@@ -48,6 +49,28 @@ export default async function JanelasPage({ searchParams }: PageProps<"/janelas"
     return addDias(dataBase, direcao);
   }
 
+  function rotuloPeriodo(): string {
+    if (visao === "mes") {
+      return `${NOMES_MES[dataBase.getMonth()]} de ${dataBase.getFullYear()}`;
+    }
+    if (visao === "semana") {
+      const mesmoMes = inicioIntervalo.getMonth() === fimIntervalo.getMonth();
+      const fimRotulo = mesmoMes
+        ? `${fimIntervalo.getDate()} de ${NOMES_MES[fimIntervalo.getMonth()]}`
+        : `${fimIntervalo.getDate()} de ${NOMES_MES[fimIntervalo.getMonth()]} de ${fimIntervalo.getFullYear()}`;
+      return `${inicioIntervalo.getDate()} – ${fimRotulo}`;
+    }
+    return `${dataBase.getDate()} de ${NOMES_MES[dataBase.getMonth()]} de ${dataBase.getFullYear()}`;
+  }
+
+  const hoje = new Date();
+  const estaNoPeriodoAtual =
+    visao === "mes"
+      ? dataBase.getMonth() === hoje.getMonth() && dataBase.getFullYear() === hoje.getFullYear()
+      : visao === "semana"
+        ? mesmoDia(inicioIntervalo, addDias(inicioDoDia(hoje), -hoje.getDay()))
+        : mesmoDia(dataBase, hoje);
+
   return (
     <div className="min-h-full flex-1 bg-zinc-50 px-6 py-10 sm:px-10">
       <div className="mx-auto max-w-5xl space-y-6">
@@ -66,28 +89,35 @@ export default async function JanelasPage({ searchParams }: PageProps<"/janelas"
               <Link
                 key={v}
                 href={hrefPara(v, dataBase)}
-                className={`rounded-full px-4 py-1.5 text-sm font-medium capitalize transition ${
+                className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                   visao === v ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-900"
                 }`}
               >
-                {v}
+                {VISAO_LABEL[v]}
               </Link>
             ))}
           </div>
 
-          <div className="flex items-center gap-2">
-            <Link href={hrefPara(visao, deslocar(-1))} aria-label="Anterior" className={botaoNavClassName}>
-              ‹
-            </Link>
-            <Link
-              href={hrefPara(visao, inicioDoDia(new Date()))}
-              className="rounded-full border border-black/5 bg-white px-4 py-2 text-sm text-zinc-600 transition hover:border-amber-300 hover:text-amber-700"
-            >
-              Hoje
-            </Link>
-            <Link href={hrefPara(visao, deslocar(1))} aria-label="Próximo" className={botaoNavClassName}>
-              ›
-            </Link>
+          <div className="flex items-center gap-3">
+            {!estaNoPeriodoAtual && (
+              <Link
+                href={hrefPara(visao, inicioDoDia(hoje))}
+                className="rounded-full border border-black/5 bg-white px-3.5 py-1.5 text-sm text-zinc-500 transition hover:border-amber-300 hover:text-amber-700"
+              >
+                Hoje
+              </Link>
+            )}
+            <div className="flex items-center gap-2">
+              <Link href={hrefPara(visao, deslocar(-1))} aria-label="Anterior" className={botaoNavClassName}>
+                ‹
+              </Link>
+              <span className="min-w-[10rem] text-center text-sm font-medium text-zinc-800">
+                {rotuloPeriodo()}
+              </span>
+              <Link href={hrefPara(visao, deslocar(1))} aria-label="Próximo" className={botaoNavClassName}>
+                ›
+              </Link>
+            </div>
           </div>
         </div>
 
