@@ -71,3 +71,23 @@ Structural changes to the memory system itself (schema, taxonomy, branch creatio
   Portuguese table/column names and the new `/api/metricas/clientes` list endpoint.
 - Added `domain` tags: ui, i18n.
 - Fourth checkpoint: `CTX-CP-20260908-1000-clientes-page-and-pt-br-rename`.
+
+## 2026-09-09 — Fourth branch gatilhos-alertas; design-system convention formalized
+
+- Created `Context/branches/gatilhos-alertas/` for the configurable alert-rule engine (global +
+  per-client gatilhos, severity ranking, seen/unseen tracking) built on top of `metrics-pipeline`,
+  plus its `/gatilhos`/`/alertas` frontend pages — a genuinely new, relatively independent domain
+  per `Context/README.md`'s branch-creation guidance, even though its frontend half lives inside
+  `frontend/` alongside `frontend-nextjs-prisma`'s other pages.
+- New global decision `CTX-DEC-20260909-frontend-design-system-tokens`: the app's light amber/zinc
+  visual language (previously implicit/organic across pages) is now written down as a standing
+  convention, prompted by having to restyle a newly-built dark-themed sidebar back to it.
+- `metrics-pipeline` and `frontend-nextjs-prisma` both extended in place (not superseded) with the
+  janelas status/manual-trigger page, the backfill script's actual usage scope, and the multi-tool
+  double-sidebar navigation architecture.
+- Added `domain` tags: gatilhos, alertas, severidade, janelas, navigation, design-system, backfill,
+  concurrency.
+- `Context/core/constraints.md`'s "Dev-server process management" section extended with two new
+  recurring failure modes on this machine (an unrelated second local project competing for the same
+  ports; the backend process being found not running at all between sessions).
+- Fifth checkpoint: `CTX-CP-20260909-1800-gatilhos-janelas-sidebar`.

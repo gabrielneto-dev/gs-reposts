@@ -34,6 +34,14 @@ canonical_tags:
     - ui
     - i18n
     - realtime
+    - gatilhos
+    - alertas
+    - severidade
+    - janelas
+    - navigation
+    - design-system
+    - backfill
+    - concurrency
 
 statuses:
   - active

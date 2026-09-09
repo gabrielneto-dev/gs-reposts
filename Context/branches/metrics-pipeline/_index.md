@@ -36,8 +36,14 @@ same day with real production data (`checkpoints/CP-20260908-1700-live-verificat
 `facts/FCT-20260908-duplicate-backend-processes-found.md`. The dev backend is now a single clean
 instance.
 
-Not yet done: no automated tests, no retry-on-transient-failure, no backfill tool for missed
-windows.
+Not yet done: no automated tests, no retry-on-transient-failure.
+
+As of 2026-09-09: a `/janelas` status page (day/week/month views) and manual-trigger endpoint exist
+for missed windows — see `decisions/DEC-20260909-manual-window-trigger.md`. A backfill script
+(`backend/scripts/backfill_historico.py`) exists but has only actually been run for "yesterday", not
+a fuller history — see `decisions/DEC-20260909-backfill-scope-yesterday-only.md`. This branch is
+now also the trigger point for `Context/branches/gatilhos-alertas/` — every window this branch
+processes (automatic, manual, or backfilled) runs the gatilhos evaluation engine afterward.
 
 ## Core concepts
 
@@ -65,6 +71,12 @@ windows.
 - **Frontend webhook**: after every collection window, the job best-effort POSTs to
   `FRONTEND_WEBHOOK_URL` (optional) so the frontend can live-refresh — see
   `decisions/DEC-20260908-frontend-webhook-notification.md`.
+- **`janelas_do_dia(dia, tz)`** (`backend/app/scheduler/grade.py`) — the single source of truth for
+  the 15-slot daily grid, shared by the grade endpoint, the manual trigger, and the backfill script.
+  See `decisions/DEC-20260909-manual-window-trigger.md`.
+- **`coleta_em_andamento`** (`asyncio.Lock`, `backend/app/scheduler/jobs.py`) — shared between the
+  automatic scheduler job and the manual-trigger endpoint so they can never run a real collection
+  window concurrently.
 
 ## Key records
 
@@ -75,6 +87,10 @@ windows.
   `/api/metricas/clientes`, default today
 - `decisions/DEC-20260908-frontend-webhook-notification.md` — best-effort webhook to the frontend
   after every window
+- `decisions/DEC-20260909-manual-window-trigger.md` — `/janelas` status grade + manual trigger,
+  guarded by a shared lock
+- `decisions/DEC-20260909-backfill-scope-yesterday-only.md` — backfill script exists for N days,
+  only actually run for yesterday
 - `facts/FCT-20260904-schema-and-reused-functions.md` (kept current in place, not superseded)
 - `facts/FCT-20260904-sqlalchemy-postgres-enum-gotchas.md`
 - `facts/FCT-20260908-duplicate-backend-processes-found.md` — two schedulers were found running at
@@ -89,6 +105,8 @@ windows.
 `decisions/DEC-20260904-sampled-discovery-exact-client-metrics.md`,
 `decisions/DEC-20260908-clientes-resumo-period-filter.md`,
 `decisions/DEC-20260908-frontend-webhook-notification.md`,
+`decisions/DEC-20260909-manual-window-trigger.md`,
+`decisions/DEC-20260909-backfill-scope-yesterday-only.md`,
 `Context/global/decisions/DEC-20260908-portuguese-schema-naming.md`.
 `DEC-20260904-collection-window-schedule.md` is superseded — don't treat it as current.
 
@@ -121,3 +139,6 @@ windows.
   of 2026-09-08 this branch also pushes to it directly: the scheduler's webhook (see
   `decisions/DEC-20260908-frontend-webhook-notification.md`) is consumed by
   `branches/frontend-nextjs-prisma/decisions/DEC-20260908-sse-same-origin-live-refresh.md`.
+- `gatilhos-alertas` — every window this branch processes (automatic, manual-triggered, or
+  backfilled) is followed by that branch's rule evaluation; see
+  `Context/branches/gatilhos-alertas/_index.md`.

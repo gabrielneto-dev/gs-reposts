@@ -75,3 +75,17 @@ Two quirks found together during live pipeline verification (2026-09-08, see
   once already (see `Context/branches/metrics-pipeline/decisions/DEC-20260908-frontend-webhook-notification.md`'s
   Consequences). Always confirm the frontend's actual port from its own terminal window before
   trusting a hardcoded URL that points at it.
+- **A second, unrelated project on this same machine** ("voip-monitor", not part of this repo) also
+  defaults to ports 3000/3001 for its own dev server. This has caused `FRONTEND_WEBHOOK_URL` /
+  `FRONTEND_ALERTAS_WEBHOOK_URL` to silently point at the *wrong application* (not just the wrong
+  port of the right one) more than once — the port responds, so no obvious connection error occurs,
+  it just doesn't reach this app. If a live-refresh/webhook/notification feature seems to silently
+  not fire, check which actual process is listening on the configured port, not just whether
+  something is.
+- Backend (`uvicorn`) has been found not running at all between working sessions on this machine
+  (process simply gone, not stuck/duplicated) — surfaces in the frontend as a generic "fetch failed"
+  error on any page that calls `backend/`. Before assuming a code regression when the user reports
+  an error like this, check `curl http://127.0.0.1:8000/docs` (or whatever port `backend/.env`'s
+  consumers expect) first. Restarting is usually the entire fix: from `backend/`, activate the venv
+  and run `uvicorn app.main:app --host 127.0.0.1 --port 8000 > uvicorn.log 2>&1 &` (redirecting to a
+  log file lets you confirm "Application startup complete" without a blocking foreground process).

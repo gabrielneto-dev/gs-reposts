@@ -20,6 +20,9 @@ Routing layer only. See `Context/README.md` for how to use this, and `Context/ST
 - `frontend-nextjs-prisma` — the Next.js frontend (`frontend/`). No database/ORM anymore (Prisma
   removed 2026-09-04) — a pure consumer of `backend/`'s API. See
   `branches/frontend-nextjs-prisma/_index.md`.
+- `gatilhos-alertas` — configurable alert-rule engine (global + per-client, severity ranking,
+  seen/unseen tracking) built on top of `metrics-pipeline`, plus its `/gatilhos` and `/alertas`
+  frontend pages. See `branches/gatilhos-alertas/_index.md`.
 
 ## Global (cross-cutting)
 
@@ -33,13 +36,16 @@ Routing layer only. See `Context/README.md` for how to use this, and `Context/ST
     storage/scheduling now; frontend has no database.
   - `DEC-20260908-portuguese-schema-naming.md` — all DB tables/columns and API fields are named
     in Portuguese; standing convention, also noted in `AGENTS.md`.
+  - `DEC-20260909-frontend-design-system-tokens.md` — the app's light amber/zinc visual language;
+    standing convention for every new frontend page/tool.
 - Plans: `global/plans/` — none yet.
 - Risks: `global/risks/` — none global; see each branch's `risks/`/`_index.md` for branch-scoped risks.
 
 ## Checkpoints
 
-- Latest: `checkpoints/CP-20260908-1700-live-verification-and-process-cleanup.md`
-- Prior: `checkpoints/CP-20260908-1600-live-refresh-and-datetime-filter.md`,
+- Latest: `checkpoints/CP-20260909-1800-gatilhos-janelas-sidebar.md`
+- Prior: `checkpoints/CP-20260908-1700-live-verification-and-process-cleanup.md`,
+  `checkpoints/CP-20260908-1600-live-refresh-and-datetime-filter.md`,
   `checkpoints/CP-20260908-1000-clientes-page-and-pt-br-rename.md`,
   `checkpoints/CP-20260904-1800-metrics-storage-and-scheduler.md`,
   `checkpoints/CP-20260904-1700-monorepo-and-frontend-scaffold.md`,

@@ -42,6 +42,9 @@ Working MVP: 8 GET routes, tested against production with real client data. See
 - `decisions/DEC-20260904-route-simplification.md`
 - `decisions/DEC-20260904-activity-detection-day-by-day.md`
 - `research/RES-20260904-asr-aggregate-endpoint-search.md`
+- `research/RES-20260909-asr-discrepancy-vs-sip-codes-report.md` — investigated a real
+  reported ASR mismatch vs. the platform's own UI report; found no code bug, did not alter the
+  formula
 - `risks/RSK-20260904-missing-date-fim-runaway-query.md`
 
 ## Active decisions
@@ -50,7 +53,9 @@ See the `decisions/` records above — all still active as of 2026-09-04.
 
 ## Open questions
 
-None currently open in this branch.
+- Whether the NextRouter platform's own "SIP Codes / Assinante" report is a reliable historical
+  reference for validating our stored ASR numbers — see
+  `research/RES-20260909-asr-discrepancy-vs-sip-codes-report.md`. Unresolved as of 2026-09-09.
 
 ## Risks
 

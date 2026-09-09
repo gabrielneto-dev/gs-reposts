@@ -63,6 +63,10 @@ If a durable, project-wide operating rule is discovered, evaluate whether it bel
   consistent with this — see `Context/global/decisions/DEC-20260908-portuguese-schema-naming.md`
   for the full rationale and the rename map. Internal-only Python identifiers with no DB/API
   surface are not required to follow this.
+- **The frontend has one visual language** (light backgrounds, amber accents, zinc text, rounded
+  cards/pills) — see `Context/global/decisions/DEC-20260909-frontend-design-system-tokens.md` for
+  the concrete tokens. Every new page/component reuses them; don't introduce a new palette per page
+  or per tool.
 
 ## Project status
 
