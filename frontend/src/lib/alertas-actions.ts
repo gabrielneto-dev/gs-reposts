@@ -11,7 +11,7 @@ export async function marcarAlertaVisto(alertaId: number): Promise<void> {
     throw new Error(`Backend respondeu ${res.status} ao marcar o alerta ${alertaId} como visto`);
   }
   revalidatePath("/alertas");
-  revalidatePath("/");
+  revalidatePath("/relatorios");
 }
 
 /** Marca todos os alertas não vistos como vistos — de um cliente específico, ou todos se
@@ -25,5 +25,5 @@ export async function marcarTodosVistos(clienteId?: number): Promise<void> {
     throw new Error(`Backend respondeu ${res.status} ao marcar todos os alertas como vistos`);
   }
   revalidatePath("/alertas");
-  revalidatePath("/");
+  revalidatePath("/relatorios");
 }

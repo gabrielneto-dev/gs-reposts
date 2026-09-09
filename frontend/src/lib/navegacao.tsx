@@ -46,7 +46,7 @@ export const FERRAMENTAS: Ferramenta[] = [
     label: "Monitoramento de Clientes",
     Icone: IconeMonitoramento,
     secoes: [
-      { itens: [{ href: "/", label: "Relatórios" }] },
+      { itens: [{ href: "/relatorios", label: "Relatórios" }] },
       {
         titulo: "Alertas",
         itens: [
